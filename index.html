@@ -370,6 +370,12 @@
   #btn-pause.is-paused .ic-pause{ display:none; }
   #btn-pause.is-paused .ic-play{ display:block; }
 
+  /* ── mute toggle — same seat as the pause button ── */
+  #btn-mute .ic-off{ display:none; }
+  #btn-mute.is-muted .ic-on{ display:none; }
+  #btn-mute.is-muted .ic-off{ display:block; }
+  #btn-mute.is-muted{ color:var(--muted); }
+
   /* ── footer hints ───────────────────────────────────── */
   .hints{
     display:flex; align-items:center; flex-wrap:wrap; justify-content:center;
@@ -523,6 +529,16 @@
       <div class="stat"><span class="label">Kills</span><span class="value" id="kills">00</span></div>
       <div class="hud-right">
         <div class="stat"><span class="label">Best</span><span class="value" id="best">0000</span></div>
+        <button class="icon-btn" id="btn-mute" aria-label="Mute sound" aria-pressed="false">
+          <svg class="ic ic-on" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M2 5h2.2L7 2.5v9L4.2 9H2z" fill="currentColor"/>
+            <path d="M9.2 4.6a3.4 3.4 0 0 1 0 4.8M10.8 3a5.6 5.6 0 0 1 0 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <svg class="ic ic-off" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M2 5h2.2L7 2.5v9L4.2 9H2z" fill="currentColor"/>
+            <path d="M9.4 5.4l3.2 3.2M12.6 5.4L9.4 8.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+        </button>
         <button class="icon-btn" id="btn-pause" aria-label="Pause game">
           <svg class="ic ic-pause" width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
             <rect x="2.8" y="2.5" width="3.1" height="9" rx="1.3"/>
@@ -670,6 +686,7 @@ const ovRole  = $('ov-role'), ovStart = $('ov-start'), ovPause = $('ov-pause'), 
 const overTitle = $('over-title'), finalScore = $('final-score'),
       overStats = $('over-stats'), overBest = $('over-best'), pillBest = $('pill-best');
 const btnPause  = $('btn-pause');
+const btnMute   = $('btn-mute');
 const toastEl   = $('toast'), frenzyEl = $('frenzy'), frenzyFill = $('frenzy-fill'), frenzyLabel = $('frenzy-label');
 const cardHuman = $('card-human'), cardZombie = $('card-zombie');
 const bestHumanEl = $('best-human'), bestZombieEl = $('best-zombie');
@@ -680,6 +697,27 @@ const COLS = 24, ROWS = 24, CELL = 24, SIZE = COLS * CELL;
 const DPR  = Math.min(window.devicePixelRatio || 1, 2);
 canvas.width  = SIZE * DPR;   // crisp on retina
 canvas.height = SIZE * DPR;
+
+// cached zombie eye-glow sprite — per-frame canvas shadowBlur is slow on phone
+// GPUs, so the red eye + its halo are baked once (at DPR) and blitted per eye.
+const EYE_GLOW = (() => {
+  const S = 12, c = document.createElement('canvas');
+  c.width = c.height = Math.ceil(S * DPR);
+  const g = c.getContext('2d');
+  g.scale(DPR, DPR);
+  const glow = g.createRadialGradient(S/2, S/2, 0, S/2, S/2, S/2);
+  glow.addColorStop(0,   'rgba(255,95,86,.8)');
+  glow.addColorStop(.18, 'rgba(255,95,86,.55)');
+  glow.addColorStop(.45, 'rgba(255,95,86,.22)');
+  glow.addColorStop(.75, 'rgba(255,95,86,.07)');
+  glow.addColorStop(1,   'rgba(255,95,86,0)');
+  g.fillStyle = glow;
+  g.fillRect(0, 0, S, S);
+  g.fillStyle = '#ff5f56';
+  g.beginPath(); g.arc(S/2, S/2, .95, 0, 7); g.fill();
+  return c;
+})();
+const drawEyeGlow = (x, y) => ctx.drawImage(EYE_GLOW, x - 6, y - 6, 12, 12);
 
 const START_MS = 150;    // chain ms/step at the beginning
 const MIN_MS   = 70;     // chain top speed
@@ -732,6 +770,157 @@ const loadBestFor = r => {
   } catch { return 0; }
 };
 const saveBest = v => { try { localStorage.setItem('svz-best-' + role, String(v)); } catch {} };
+
+/* ═══════════════ audio (Web Audio, all synthesized) ═══════════════ */
+
+const SND = (() => {
+  let ctx = null, master = null, noiseBuf = null, drone = null, muted = false;
+
+  // AudioContext is only ever created inside a user gesture (see the
+  // capture-phase unlock listeners at the bottom). Everything else is
+  // guarded so audio can never throw into the game loop.
+  function unlock(){
+    if (ctx) { if (ctx.state === 'suspended') ctx.resume().catch(() => {}); return; }
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      ctx = new AC();
+      master = ctx.createGain();
+      master.gain.value = muted ? 0 : .9;
+      master.connect(ctx.destination);
+    } catch { ctx = null; }
+  }
+
+  function setMuted(m){
+    muted = m;
+    if (ctx) try { master.gain.setTargetAtTime(m ? 0 : .9, ctx.currentTime, .03); } catch {}
+  }
+
+  const live = () => { // true only when we can make a sound right now
+    if (!ctx || muted) return false;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    return true;
+  };
+
+  function osc(type, f, t){ const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, t); return o; }
+
+  /* one enveloped note: attack → exponential decay, fire-and-forget */
+  function note(type, f0, f1, when, dur, vol, atk = .008, lpF = 0){
+    const t = ctx.currentTime + when;
+    const o = osc(type, f0, t);
+    if (f1) o.frequency.exponentialRampToValueAtTime(Math.max(24, f1), t + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + atk);
+    g.gain.exponentialRampToValueAtTime(.0006, t + dur);
+    let head = g;
+    if (lpF) {
+      const f = ctx.createBiquadFilter();
+      f.type = 'lowpass'; f.frequency.value = lpF;
+      g.connect(f); head = f;
+    }
+    o.connect(g); head.connect(master);
+    o.start(t); o.stop(t + dur + .05);
+  }
+
+  /* filtered noise burst with a sweeping lowpass */
+  function hiss(when, dur, vol, f0, f1){
+    const t = ctx.currentTime + when;
+    if (!noiseBuf) {
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate * .5 | 0, ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const n = ctx.createBufferSource(); n.buffer = noiseBuf;
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass';
+    f.frequency.setValueAtTime(f0, t);
+    f.frequency.exponentialRampToValueAtTime(Math.max(40, f1), t + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(.0006, t + dur);
+    n.connect(f).connect(g).connect(master);
+    n.start(t); n.stop(t + dur + .02);
+  }
+
+  /* ── the palette (short, quiet, arcade-flavored) ── */
+
+  function ui(){ if (!live()) return; try {                      // confirm tap
+    note('sine', 1180, 0, 0, .05, .04);
+    note('sine', 1560, 0, .03, .045, .026);
+  } catch {} }
+
+  function blip(){ if (!live()) return; try {                    // recruit joins
+    note('triangle', 620, 930, 0, .09, .07);
+    note('triangle', 930, 1240, .07, .09, .05);
+  } catch {} }
+
+  function kill(v = 1){ if (!live()) return; try {              // headbutt / kill
+    note('sine', 170, 52, 0, .16, .14 * v);
+    hiss(0, .13, .09 * v, 1400, 150);
+  } catch {} }
+
+  function hurt(){ if (!live()) return; try {                   // a catch on the chain
+    note('square', 300, 210, 0, .1, .045, .006, 1600);
+    note('square', 150, 105, .06, .12, .05, .006, 1200);
+  } catch {} }
+
+  function wave(){ if (!live()) return; try {                    // wave horn
+    note('sawtooth', 98, 0, 0, .45, .06, .04, 520);
+    note('sawtooth', 147, 0, .02, .42, .045, .04, 520);
+    note('sawtooth', 196, 0, .04, .4, .03, .04, 520);
+  } catch {} }
+
+  function frenzy(){ if (!live()) return; try {                  // medkit / brain
+    const arp = [523.25, 659.25, 880, 1318.5];
+    arp.forEach((f, i) => note('triangle', f, 0, i * .055, .12, .055));
+    note('sine', 500, 1600, 0, .45, .025);
+  } catch {} }
+
+  function death(){ if (!live()) return; try {                   // run over
+    note('sawtooth', 240, 46, 0, .7, .1, .012, 900);
+    hiss(0, .5, .06, 900, 120);
+    note('sine', 90, 40, .05, .6, .1);
+  } catch {} }
+
+  function best(){ if (!live()) return; try {                    // new record (lands after the death fall)
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) =>
+      note('sine', f, 0, .55 + i * .09, .14, .06, .01));
+  } catch {} }
+
+  /* ── ambient graveyard drone (only while playing) ── */
+
+  function droneStart(){
+    if (!ctx || muted || drone) return;
+    try {
+      const t = ctx.currentTime;
+      const out = ctx.createGain(); out.gain.value = 0;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 240; lp.Q.value = .4;
+      const mix = ctx.createGain(); mix.gain.value = .8;
+      const o1 = osc('triangle', 55, t);
+      const o2 = osc('triangle', 82.41, t); o2.detune.value = 7;   // a grumbly fifth
+      const o3 = osc('sine', 110, t);     o3.detune.value = -9;
+      [o1, o2, o3].forEach(o => o.connect(mix));
+      mix.connect(lp).connect(out).connect(master);
+      const lfo = osc('sine', .07, t);                             // slow breathing
+      const lfoG = ctx.createGain(); lfoG.gain.value = .3;
+      lfo.connect(lfoG).connect(mix.gain);
+      o1.start(t); o2.start(t); o3.start(t); lfo.start(t);
+      out.gain.setTargetAtTime(.05, t, 1.2);
+      const nodes = [o1, o2, o3, lfo];
+      drone = { stop(){
+        try {
+          const e = ctx.currentTime;
+          out.gain.setTargetAtTime(0, e, .25);
+          nodes.forEach(o => o.stop(e + 1));
+        } catch {}
+      } };
+    } catch { drone = null; }
+  }
+
+  function droneStop(){ if (!drone) return; try { drone.stop(); } catch {} drone = null; }
+
+  return { unlock, setMuted, ui, blip, kill, hurt, wave, frenzy, death, best, droneStart, droneStop };
+})();
 
 /* ═══════════════ state ═══════════════ */
 
@@ -813,6 +1002,7 @@ function applyRoleSkin() {
 }
 
 function pickRole(r) {
+  SND.ui();
   role = r;
   best = loadBestFor(r);
   setRoleFocus(r);
@@ -824,6 +1014,8 @@ function pickRole(r) {
 
 function toRoleSelect() {
   clearTimeout(overTimer);
+  SND.droneStop();
+  SND.ui();
   reset();
   updateRoleCards();
   setRoleFocus(role);
@@ -864,10 +1056,12 @@ function startGame(d) {
   state = 'playing';
   hideOverlays();
   syncPauseBtn();
+  SND.ui();
+  SND.droneStart();
 }
 
-function pause()  { if (state !== 'playing') return; state = 'paused';  show(ovPause); syncPauseBtn(); }
-function resume() { if (state !== 'paused')  return; state = 'playing'; hideOverlays(); syncPauseBtn(); }
+function pause()  { if (state !== 'playing') return; state = 'paused';  show(ovPause); syncPauseBtn(); SND.droneStop(); }
+function resume() { if (state !== 'paused')  return; state = 'playing'; hideOverlays(); syncPauseBtn(); SND.droneStart(); }
 
 function syncPauseBtn() {
   btnPause.classList.toggle('is-paused', state === 'paused');
@@ -913,6 +1107,7 @@ function killFoe(f, pts) { // shared by headbutts, fighter saves and hunter shot
   stains.push({ x: f.x, y: f.y, seed: (Math.random() * 1e9) | 0, bornAt: gt });
   if (stains.length > 30) stains.shift();
   shake('sm');
+  SND.kill();
   updateHud();
 }
 
@@ -928,6 +1123,7 @@ function recruit(i) { // touch a wanderer with your head — they join the tail
   const a = allies[i];
   allies.splice(i, 1);
   score += 10;
+  SND.blip();
   pending.push({ cls: a.cls, skin: a.skin, hair: a.hair, cloth: a.cloth, arms: 2, phase: a.phase });
   burst((a.x + .5) * CELL, (a.y + .5) * CELL, MED_P, 8);
   updateHud();
@@ -938,6 +1134,7 @@ function eatPickup() {
   score += 150;
   pending.push(makeChar(role)); // reinforcements
   frenzyUntil = gt + FRENZY_MS;
+  SND.frenzy();
   nextPickupAt = gt + 15000 + Math.random() * 6000;
   burst((snake[0].x + .5) * CELL, (snake[0].y + .5) * CELL, role === 'human' ? MED_P : BRAIN_P, 16);
   showToast(role === 'human' ? 'ADRENALINE!' : 'FRENZY!', role !== 'human');
@@ -961,6 +1158,7 @@ function bite(f, idx) {
     }
   }
   const caughtChar = roster[idx] || makeChar(role);
+  SND.hurt();
   const lost = Math.min(BITE_LOSS, snake.length - 1);
   for (let k = 0; k < lost; k++) {
     const t = snake[snake.length - 1];
@@ -1012,13 +1210,15 @@ function die(cause) {
   state = 'over';
   deathCause = cause;
   deathAt = gt;
+  SND.droneStop();
+  SND.death();
   shake('lg');
   finish();
 }
 
 function finish() {
   const newBest = score > best;
-  if (newBest) { best = score; saveBest(best); }
+  if (newBest) { best = score; saveBest(best); SND.best(); }
   const titles = role === 'human'
     ? { wall: 'Splat.', self: 'Tangled.', head: 'Devoured.', picked: 'Picked clean.' }
     : { wall: 'Splat.', self: 'Tangled.', head: 'Overwhelmed.', picked: 'Scattered.' };
@@ -1090,6 +1290,7 @@ function updateFoes() {
     wave++;
     waveNextAt = gt + WAVE_MS;
     showToast('WAVE ' + wave);
+    SND.wave();
     for (const f of foes) f.moveMs = Math.max(170, f.moveMs * .95);
     updateHud();
   }
@@ -1255,6 +1456,7 @@ function tryShoot(shooter, x, y) { // hunters — hitscan on the nearest zombie 
 function eatWanderer(f, ai) { // zombies eat unrecruited wanderers too — urgency
   const a = allies[ai];
   allies.splice(ai, 1);
+  SND.kill(.45);
   f.meals = (f.meals || 0) + 1;
   f.stunUntil = gt + EAT_MS;
   f.eat = { until: gt + EAT_MS, x: f.x, y: f.y, fx: f.fx, fy: f.fy, char: a, nextGore: gt + 120 };
@@ -1382,6 +1584,23 @@ btnPause.addEventListener('click', e => {
   e.stopPropagation(); e.currentTarget.blur();
   if (state === 'playing') pause();
   else if (state === 'paused') resume();
+});
+
+/* ── mute toggle (persisted; default unmuted) ── */
+let muted = false;
+try { muted = localStorage.getItem('svz-muted') === '1'; } catch {}
+function syncMuteBtn() {
+  btnMute.classList.toggle('is-muted', muted);
+  btnMute.setAttribute('aria-pressed', String(muted));
+  btnMute.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
+}
+btnMute.addEventListener('click', e => {
+  e.stopPropagation(); e.currentTarget.blur();
+  muted = !muted;
+  try { localStorage.setItem('svz-muted', muted ? '1' : '0'); } catch {}
+  SND.setMuted(muted);
+  syncMuteBtn();
+  if (!muted && state === 'playing') SND.droneStart(); // bring the drone back
 });
 ovStart.addEventListener('click', () => startGame());
 ovPause.addEventListener('click', () => resume());
@@ -1541,20 +1760,14 @@ function drawZombieChar(cx, cy, t, c, o) {
     }
   } else if (eating) {
     // red eyes and a working jaw
-    ctx.fillStyle = '#ff5f56';
-    ctx.shadowColor = 'rgba(255,95,86,.8)'; ctx.shadowBlur = 4;
-    ctx.beginPath(); ctx.arc(-1.8, -9.3, .95, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.arc(1.8, -9.3, .95, 0, 7); ctx.fill();
-    ctx.shadowBlur = 0;
+    drawEyeGlow(-1.8, -9.3);
+    drawEyeGlow(1.8, -9.3);
     const gape = 1 + 1.7 * Math.abs(Math.sin(t / 95));
     ctx.fillStyle = '#1c261d';
     ctx.beginPath(); ctx.arc(0, -6.1, gape, 0, 7); ctx.fill();
   } else if (chasing || o.eyes === 'red' || o.eyes === 'frenzy') {
-    ctx.fillStyle = '#ff5f56';
-    ctx.shadowColor = 'rgba(255,95,86,.8)'; ctx.shadowBlur = 4;
-    ctx.beginPath(); ctx.arc(-1.8, -9.3, .95, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.arc(1.8, -9.3, .95, 0, 7); ctx.fill();
-    ctx.shadowBlur = 0;
+    drawEyeGlow(-1.8, -9.3);
+    drawEyeGlow(1.8, -9.3);
     ctx.strokeStyle = '#1c261d'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(-1.4, -6.2); ctx.lineTo(1.4, -6.6); ctx.stroke();
   } else {
@@ -1671,8 +1884,14 @@ function drawPickup(t) {
     const r = CELL * .32 * (1 + .07 * Math.sin(t / 240));
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.shadowColor = 'rgba(255,158,199,.6)';
-    ctx.shadowBlur = 16;
+    // soft halo (was canvas shadowBlur — slow on phones); gradient approximates
+    // the old glow: full strength at the brain's edge, fading out over ~16px
+    const halo = ctx.createRadialGradient(cx, cy, r, cx, cy, r + 16);
+    halo.addColorStop(0,  'rgba(255,158,199,.30)');
+    halo.addColorStop(.5, 'rgba(255,158,199,.11)');
+    halo.addColorStop(1,  'rgba(255,158,199,0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(cx, cy, r + 16, 0, 7); ctx.fill();
     const g = ctx.createRadialGradient(cx - r*.3, cy - r*.35, r*.1, cx, cy, r);
     g.addColorStop(0, '#ffd3e4'); g.addColorStop(.6, '#f27ba8'); g.addColorStop(1, '#d9548c');
     ctx.fillStyle = g;
@@ -1695,11 +1914,15 @@ function drawPickup(t) {
     const s = CELL * .30 * (1 + .06 * Math.sin(t / 240));
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.shadowColor = 'rgba(163,241,96,.5)';
-    ctx.shadowBlur = 14;
+    // soft halo (was canvas shadowBlur — slow on phones)
+    const halo = ctx.createRadialGradient(cx, cy, s, cx, cy, s + 14);
+    halo.addColorStop(0,  'rgba(163,241,96,.25)');
+    halo.addColorStop(.5, 'rgba(163,241,96,.09)');
+    halo.addColorStop(1,  'rgba(163,241,96,0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(cx, cy, s + 14, 0, 7); ctx.fill();
     ctx.fillStyle = '#dde6df';
     ctx.beginPath(); ctx.roundRect(cx - s, cy - s * .78, s * 2, s * 1.56, 3.5); ctx.fill();
-    ctx.shadowBlur = 0;
     ctx.fillStyle = '#3fae5a';
     ctx.fillRect(cx - 1.7, cy - s * .55, 3.4, s * 1.1);
     ctx.fillRect(cx - s * .55, cy - 1.7, s * 1.1, 3.4);
@@ -1918,7 +2141,16 @@ reset();
 updateRoleCards();
 setRoleFocus('human');
 show(ovRole);
+syncMuteBtn();
+SND.setMuted(muted);   // applies to the context once a gesture unlocks it
 requestAnimationFrame(frame);
+
+// unlock audio on the first gesture — capture phase so the context exists
+// before any game handler (which may want to play a sound) runs
+const unlockAudio = () => SND.unlock();
+window.addEventListener('keydown', unlockAudio, { capture: true });
+window.addEventListener('pointerdown', unlockAudio, { capture: true });
+window.addEventListener('touchstart', unlockAudio, { capture: true, passive: true });
 
 })();
 </script>

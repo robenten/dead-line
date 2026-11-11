@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f0c">
+<title>SNAKE — single-file arcade</title>
+<!--
+  ─────────────────────────────────────────────────────────────
+  SNAKE · a single-file arcade game
+  Controls:
+    Arrow keys or WASD ... steer
+    P or Space ........... pause / resume
+    R .................... restart (also restarts mid-run)
+    Enter / Space ........ confirm on start & game-over screens
+    Touch ............... swipe anywhere to steer · tap overlays to
+                         start/resume/restart · pause button in the HUD
+  No server, no build step, no external assets — open and play.
+  Best score is kept in localStorage ("snake-best"). Works with keyboard and touch.
+  ─────────────────────────────────────────────────────────────
+-->
+<style>
+  :root{
+    --bg:        #0a0f0c;
+    --panel:     #101814;
+    --board:     #0d1611;
+    --line:      rgba(163,241,96,.10);
+    --ink:       #e9f3eb;
+    --muted:     #7f978c;
+    --accent:    #a3f160;   /* lime — snake & primary actions */
+    --accent-2:  #2dd4bf;   /* teal — tail gradient */
+    --danger:    #f4564e;   /* apple red — food & death flash */
+    --sans: "Avenir Next","Century Gothic","Segoe UI","Helvetica Neue",sans-serif;
+    --mono: ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  html{ overscroll-behavior:none; }            /* no scroll chaining / pull-to-refresh */
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:
+      radial-gradient(1100px 520px at 50% -140px, #14271c 0%, var(--bg) 62%),
+      var(--bg);
+    min-height:100vh;
+    min-height:100dvh;                         /* stable under mobile browser chrome */
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+    overscroll-behavior:none;
+    touch-action:none;                         /* the whole page is a game surface */
+    padding:28px 16px;
+    padding-top:max(28px, env(safe-area-inset-top));
+    padding-bottom:max(28px, env(safe-area-inset-bottom));
+    padding-left:max(16px, env(safe-area-inset-left));
+    padding-right:max(16px, env(safe-area-inset-right));
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;                /* no long-press callout */
+    -webkit-tap-highlight-color:transparent;    /* no gray tap flash */
+    -webkit-font-smoothing:antialiased;
+  }
+  /* soft atmosphere behind everything */
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none;
+    background:
+      radial-gradient(900px 420px at 50% -80px, rgba(90,210,130,.09), transparent 65%),
+      radial-gradient(720px 520px at 88% 112%, rgba(45,212,191,.05), transparent 60%);
+  }
+  /* film grain — inline SVG turbulence, no assets */
+  .grain{
+    position:fixed; inset:0; pointer-events:none; opacity:.05; z-index:5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .stage{
+    position:relative; z-index:1;
+    display:flex; flex-direction:column; align-items:center;
+    gap:22px;
+  }
+
+  /* ── masthead ─────────────────────────────────────────── */
+  .masthead{ text-align:center; }
+  .kicker{
+    font:600 10px/1 var(--mono);
+    letter-spacing:.46em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:10px;
+  }
+  .title{
+    font-size:clamp(26px,5vw,34px); font-weight:800;
+    letter-spacing:.32em; text-transform:uppercase;
+    text-indent:.32em; /* optically re-centers tracked text */
+  }
+  .title .dot{ color:var(--accent); }
+
+  /* ── board frame ─────────────────────────────────────── */
+  .frame{
+    width:min(520px, 92vw, calc(100vh - 250px));
+    width:min(520px, 92vw, calc(100dvh - 250px));
+    border-radius:18px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    box-shadow:
+      0 34px 80px -24px rgba(0,0,0,.75),
+      0 0 0 1px rgba(0,0,0,.4),
+      0 0 60px -18px rgba(163,241,96,.14),
+      inset 0 1px 0 rgba(255,255,255,.05);
+    overflow:hidden;
+  }
+  .hud{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:13px 18px;
+    border-bottom:1px solid var(--line);
+  }
+  .stat{ display:flex; align-items:baseline; gap:10px; }
+  .hud-right{ display:flex; align-items:center; gap:14px; }
+  .label{
+    font:600 9.5px/1 var(--mono);
+    letter-spacing:.28em; text-transform:uppercase; color:var(--muted);
+  }
+  .value{
+    font:700 16px/1 var(--mono); font-variant-numeric:tabular-nums;
+    display:inline-block; /* transformable for the pop */
+  }
+  #best{ color:var(--muted); }
+  #score.pop{ animation:pop .32s ease; }
+  @keyframes pop{
+    35%{ transform:scale(1.3); color:var(--accent); }
+  }
+
+  .board{ position:relative; }
+  canvas{ display:block; width:100%; height:auto; }
+
+  /* ── overlays ────────────────────────────────────────── */
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; padding:24px; text-align:center;
+    background:rgba(8,13,10,.74);
+    -webkit-backdrop-filter:blur(7px); backdrop-filter:blur(7px);
+    opacity:0; pointer-events:none;
+    transition:opacity .28s ease;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; cursor:pointer; }
+  .overlay > *{
+    opacity:0; transform:translateY(12px);
+    transition:opacity .38s cubic-bezier(.2,.7,.2,1), transform .38s cubic-bezier(.2,.7,.2,1);
+  }
+  .overlay.show > *{ opacity:1; transform:none; }
+  .overlay.show > :nth-child(1){ transition-delay:.04s }
+  .overlay.show > :nth-child(2){ transition-delay:.10s }
+  .overlay.show > :nth-child(3){ transition-delay:.16s }
+  .overlay.show > :nth-child(4){ transition-delay:.22s }
+  .overlay.show > :nth-child(5){ transition-delay:.28s }
+  .overlay.show > :nth-child(6){ transition-delay:.34s }
+  .overlay.show > :nth-child(7){ transition-delay:.40s }
+
+  .ov-title{
+    font-size:26px; font-weight:800;
+    letter-spacing:.2em; text-indent:.2em; text-transform:uppercase;
+  }
+  .ov-text{ font-size:13px; color:var(--muted); letter-spacing:.04em; }
+  .ov-hint{
+    font:500 11px/1.7 var(--mono); color:var(--muted); letter-spacing:.08em;
+  }
+  .ov-hint kbd{ margin:0 2px; }
+  .pulse{ animation:pulse 1.8s ease-in-out infinite; }
+  @keyframes pulse{ 50%{ opacity:.38; } }
+
+  .final{ display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .final .big{
+    font:700 42px/1 var(--mono); font-variant-numeric:tabular-nums;
+    color:var(--accent); text-shadow:0 0 26px rgba(163,241,96,.35);
+  }
+  .pill{
+    font:700 10px/1 var(--mono);
+    letter-spacing:.24em; text-transform:uppercase; text-indent:.24em;
+    color:#101907; background:var(--accent);
+    padding:7px 14px; border-radius:999px;
+    box-shadow:0 0 26px rgba(163,241,96,.35);
+    animation:pillPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pillPulse{ 50%{ transform:scale(1.05); } }
+
+  /* ── buttons ─────────────────────────────────────────── */
+  .btn{
+    appearance:none; border:0; cursor:pointer;
+    display:inline-flex; align-items:center; gap:9px;
+    font:700 12.5px/1 var(--sans);
+    letter-spacing:.16em; text-transform:uppercase; text-indent:.16em;
+    padding:14px 28px; border-radius:11px;
+    color:#0c1207; background:var(--accent);
+    box-shadow:
+      0 8px 24px -8px rgba(163,241,96,.5),
+      inset 0 1px 0 rgba(255,255,255,.4);
+    transition:transform .16s ease, filter .16s ease, box-shadow .16s ease;
+  }
+  .btn:hover{
+    transform:translateY(-2px); filter:brightness(1.08);
+    box-shadow:0 14px 30px -8px rgba(163,241,96,.6), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .btn:active{ transform:translateY(0) scale(.97); filter:brightness(.94); }
+  .btn:focus-visible{ outline:2px solid var(--accent-2); outline-offset:3px; }
+  .btn svg{ flex:none; }
+
+  /* ── footer hints ───────────────────────────────────── */
+  .hints{
+    display:flex; align-items:center; flex-wrap:wrap; justify-content:center;
+    gap:12px; color:var(--muted); font:500 11px/1 var(--mono); letter-spacing:.06em;
+  }
+  kbd{
+    font:600 11px/1 var(--mono);
+    color:#c6d6c9;
+    background:#18231e;
+    border:1px solid #2a3830; border-bottom-width:2px;
+    border-radius:6px; padding:4px 7px;
+    display:inline-block;
+  }
+  .cluster{ display:inline-flex; gap:4px; }
+  .or{ font-size:10px; opacity:.75; }
+  .sep{ width:3px; height:3px; border-radius:50%; background:var(--muted); opacity:.6; }
+
+  /* death shake */
+  .frame.shake{ animation:shake .45s cubic-bezier(.36,.07,.19,.97); }
+  @keyframes shake{
+    10%,90%{ transform:translate(-2px,1px); }
+    20%,80%{ transform:translate(3px,-1px); }
+    30%,50%,70%{ transform:translate(-4px,2px); }
+    40%,60%{ transform:translate(4px,-2px); }
+  }
+
+  @media (max-height:740px){
+    .stage{ gap:14px; }
+    .kicker{ margin-bottom:6px; }
+  }
+
+  /* ── small icon button (pause) — comfortable touch hit area ── */
+  .icon-btn{
+    appearance:none; cursor:pointer;
+    width:44px; height:44px; border-radius:12px;
+    border:1px solid #2a3830; background:#18231e; color:#c6d6c9;
+    display:inline-flex; align-items:center; justify-content:center;
+    transition:background .15s ease, color .15s ease, transform .1s ease;
+  }
+  .icon-btn:hover{ background:#1f2b25; color:var(--ink); }
+  .icon-btn:active{ transform:scale(.92); }
+  .icon-btn:focus-visible{ outline:2px solid var(--accent-2); outline-offset:2px; }
+  @media (pointer:fine){ .icon-btn{ width:36px; height:36px; border-radius:10px; } }
+  #btn-pause .ic-play{ display:none; }
+  #btn-pause.is-paused .ic-pause{ display:none; }
+  #btn-pause.is-paused .ic-play{ display:block; }
+
+  /* touch vs. keyboard hint text */
+  .touch-only{ display:none; }
+  @media (pointer:coarse){
+    .touch-only{ display:revert; }
+    .key-only{ display:none; }
+    .btn{ padding:17px 34px; font-size:14px; border-radius:13px; }
+    .ov-title{ font-size:28px; }
+    .ov-text{ font-size:14.5px; }
+    .ov-hint{ font-size:12px; }
+    .final .big{ font-size:46px; }
+  }
+
+  /* short screens (phones in landscape): shrink the chrome, feed the board */
+  @media (max-height:540px){
+    body{ padding-top:12px; padding-bottom:12px; }
+    .stage{ gap:10px; }
+    .kicker{ display:none; }
+    .title{ font-size:15px; letter-spacing:.26em; text-indent:.26em; }
+    .hints{ display:none; }
+    .frame{
+      width:min(520px, 92vw, calc(100vh - 140px));
+      width:min(520px, 92vw, calc(100dvh - 140px));
+    }
+  }
+</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<main class="stage">
+  <header class="masthead">
+    <p class="kicker">Single-file arcade</p>
+    <h1 class="title">SNAKE<span class="dot">.</span></h1>
+  </header>
+
+  <section class="frame" id="frame" aria-label="Snake game">
+    <div class="hud">
+      <div class="stat"><span class="label">Score</span><span class="value" id="score">0000</span></div>
+      <div class="hud-right">
+        <div class="stat"><span class="label">Best</span><span class="value" id="best">0000</span></div>
+        <button class="icon-btn" id="btn-pause" aria-label="Pause game">
+          <svg class="ic ic-pause" width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
+            <rect x="2.8" y="2.5" width="3.1" height="9" rx="1.3"/>
+            <rect x="8.1" y="2.5" width="3.1" height="9" rx="1.3"/>
+          </svg>
+          <svg class="ic ic-play" width="12" height="14" viewBox="0 0 10 12" aria-hidden="true">
+            <path d="M0 0 10 6 0 12Z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="board">
+      <canvas id="board" width="576" height="576" role="img" aria-label="Snake game board"></canvas>
+
+      <!-- start screen -->
+      <div class="overlay" id="ov-start">
+        <svg width="46" height="46" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="mark" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0" stop-color="#2dd4bf"/><stop offset="1" stop-color="#a3f160"/>
+            </linearGradient>
+          </defs>
+          <path d="M10 38c0-9 7-12 14-12s14-3 14-12"
+                stroke="url(#mark)" stroke-width="7.5" stroke-linecap="round"/>
+          <circle cx="38" cy="14" r="4.6" fill="#bdf26b"/>
+        </svg>
+        <h2 class="ov-title">Ready?</h2>
+        <p class="ov-text">Eat. Grow. Don't bite yourself.</p>
+        <button class="btn" id="btn-start">
+          <svg width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><path d="M0 0 10 6 0 12Z" fill="currentColor"/></svg>
+          Start game
+        </button>
+        <p class="ov-hint pulse key-only">press any key to begin</p>
+        <p class="ov-hint pulse touch-only">tap to begin · swipe to steer</p>
+      </div>
+
+      <!-- pause screen -->
+      <div class="overlay" id="ov-pause">
+        <svg width="15" height="15" viewBox="0 0 14 14" fill="var(--accent)" aria-hidden="true">
+          <rect x="2.5" y="2" width="3.2" height="10" rx="1.4"/>
+          <rect x="8.3" y="2" width="3.2" height="10" rx="1.4"/>
+        </svg>
+        <h2 class="ov-title">Paused</h2>
+        <p class="ov-hint key-only">press <kbd>P</kbd> or <kbd>Space</kbd> — or click — to resume</p>
+        <p class="ov-hint touch-only">tap anywhere to resume</p>
+      </div>
+
+      <!-- game-over screen -->
+      <div class="overlay" id="ov-over">
+        <h2 class="ov-title" id="over-title">Game over</h2>
+        <div class="final">
+          <span class="label">Final score</span>
+          <span class="big" id="final-score">0000</span>
+        </div>
+        <p class="ov-text" id="over-best">Best 0000</p>
+        <span class="pill" id="pill-best" hidden>New best</span>
+        <button class="btn" id="btn-restart">
+          <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true">
+            <path d="M12 7A5 5 0 1 1 8.6 2.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M12.4 1.2v3.4H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Play again
+        </button>
+        <p class="ov-hint key-only">press <kbd>R</kbd> or <kbd>Enter</kbd></p>
+        <p class="ov-hint touch-only">tap anywhere to play again</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="hints" aria-label="Controls">
+    <span class="cluster"><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></span>
+    <span class="or">or</span>
+    <span class="cluster"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>
+    <span class="or touch-only">or</span>
+    <span class="touch-only">swipe anywhere to steer</span>
+    <span class="sep"></span>
+    <span><kbd>P</kbd> pause</span>
+    <span class="sep"></span>
+    <span><kbd>R</kbd> restart</span>
+  </footer>
+</main>
+
+<script>
+(() => {
+'use strict';
+
+/* ═══════════════ setup ═══════════════ */
+
+const canvas = document.getElementById('board');
+const ctx    = canvas.getContext('2d');
+const $      = id => document.getElementById(id);
+const scoreEl = $('score'), bestEl = $('best');
+const frameEl = $('frame');
+const ovStart = $('ov-start'), ovPause = $('ov-pause'), ovOver = $('ov-over');
+const overTitle = $('over-title'), finalScore = $('final-score'),
+      overBest  = $('over-best'),  pillBest   = $('pill-best');
+const btnPause = $('btn-pause');
+
+const COLS = 24, ROWS = 24, CELL = 24, SIZE = COLS * CELL;
+const DPR  = Math.min(window.devicePixelRatio || 1, 2);
+canvas.width  = SIZE * DPR;   // crisp on retina
+canvas.height = SIZE * DPR;
+
+const START_MS = 150;   // ms per step at the beginning
+const MIN_MS   = 68;    // top speed
+const STEP_DROP = 3.2;  // ms faster per food
+const POINTS    = 10;
+const STORE_KEY = 'snake-best';
+
+const loadBest = () => { try { return Math.max(0, +localStorage.getItem(STORE_KEY) || 0); } catch { return 0; } };
+const saveBest = v   => { try { localStorage.setItem(STORE_KEY, String(v)); } catch {} };
+
+/* ═══════════════ state ═══════════════ */
+
+let state = 'start';            // start | playing | paused | over
+let snake = [], prevSnake = []; // head first; prevSnake drives interpolation
+let dir = { x: 1, y: 0 }, queue = [];
+let food = { x: 0, y: 0 }, growth = 0;
+let score = 0, best = loadBest();
+let stepMs = START_MS, acc = 0, interp = 0;
+let effects = [];               // eat ripples
+let deathAt = 0, overTimer = 0;
+
+/* ═══════════════ helpers ═══════════════ */
+
+const lerp = (a, b, t) => a + (b - a) * t;
+const fmt  = n => String(n).padStart(4, '0');
+// body color: teal tail (k=0) → lime near the head (k=1)
+const segColor = k =>
+  `hsl(${lerp(165, 96, k).toFixed(1)} ${lerp(55, 72, k).toFixed(1)}% ${lerp(38, 56, k).toFixed(1)}%)`;
+
+/* ═══════════════ game flow ═══════════════ */
+
+function reset() {
+  clearTimeout(overTimer);
+  const cy = ROWS >> 1, cx = COLS >> 1;
+  snake = [{ x: cx, y: cy }, { x: cx - 1, y: cy }, { x: cx - 2, y: cy }];
+  prevSnake = snake.map(s => ({ ...s }));
+  dir = { x: 1, y: 0 }; queue = [];
+  growth = 0; score = 0;
+  stepMs = START_MS; acc = 0; interp = 0;
+  effects = []; deathAt = 0;
+  frameEl.classList.remove('shake');
+  spawnFood();
+  updateHud();
+}
+
+function startGame(d) {
+  reset();
+  if (d && !(d.x === -1 && d.y === 0)) dir = d; // can't launch into your own body
+  state = 'playing';
+  hideOverlays();
+  syncPauseBtn();
+}
+
+function pause()  { if (state !== 'playing') return; state = 'paused';  show(ovPause); syncPauseBtn(); }
+function resume() { if (state !== 'paused')  return; state = 'playing'; hideOverlays(); syncPauseBtn(); }
+
+function syncPauseBtn() {
+  btnPause.classList.toggle('is-paused', state === 'paused');
+  btnPause.setAttribute('aria-label', state === 'paused' ? 'Resume game' : 'Pause game');
+}
+
+function step() {
+  prevSnake = snake.map(s => ({ ...s }));
+  if (queue.length) dir = queue.shift();
+
+  const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+  // walls
+  if (head.x < 0 || head.y < 0 || head.x >= COLS || head.y >= ROWS) return die();
+  // self (the tail cell is safe unless we're growing this step)
+  const grow = growth > 0;
+  for (let i = 0; i < snake.length; i++) {
+    if (snake[i].x === head.x && snake[i].y === head.y &&
+        !(i === snake.length - 1 && !grow)) return die();
+  }
+
+  snake.unshift(head);
+  if (grow) growth--; else snake.pop();
+
+  if (head.x === food.x && head.y === food.y) eat();
+}
+
+function eat() {
+  score += POINTS;
+  growth += 1;
+  stepMs = Math.max(MIN_MS, stepMs - STEP_DROP);
+  effects.push({ x: (food.x + .5) * CELL, y: (food.y + .5) * CELL, t0: performance.now() });
+  popScore();
+  spawnFood();
+  updateHud();
+}
+
+function spawnFood() {
+  const occ = new Set(snake.map(s => s.x + '_' + s.y));
+  const free = [];
+  for (let y = 0; y < ROWS; y++)
+    for (let x = 0; x < COLS; x++)
+      if (!occ.has(x + '_' + y)) free.push({ x, y });
+  if (!free.length) { food = { x: -99, y: -99 }; return win(); }
+  food = free[(Math.random() * free.length) | 0];
+}
+
+function die() {
+  state = 'over';
+  deathAt = performance.now();
+  frameEl.classList.remove('shake'); void frameEl.offsetWidth; frameEl.classList.add('shake');
+  finish(false);
+}
+
+function win() {
+  state = 'over';
+  finish(true);
+}
+
+function finish(isWin) {
+  const newBest = score > best;
+  if (newBest) { best = score; saveBest(best); updateHud(); }
+  overTitle.textContent   = isWin ? 'Flawless.' : 'Game over';
+  finalScore.textContent  = fmt(score);
+  overBest.textContent    = 'Best ' + fmt(best);
+  pillBest.hidden         = !newBest;
+  overTimer = setTimeout(() => show(ovOver), 620); // let the death land first
+}
+
+/* ═══════════════ overlays & hud ═══════════════ */
+
+const overlays = [ovStart, ovPause, ovOver];
+function show(el)     { overlays.forEach(o => o.classList.toggle('show', o === el)); }
+function hideOverlays(){ overlays.forEach(o => o.classList.remove('show')); }
+
+function updateHud() { scoreEl.textContent = fmt(score); bestEl.textContent = fmt(best); }
+function popScore()  { scoreEl.classList.remove('pop'); void scoreEl.offsetWidth; scoreEl.classList.add('pop'); }
+
+/* ═══════════════ input ═══════════════ */
+
+const DIRS = {
+  ArrowUp:    { x: 0,  y: -1 }, KeyW: { x: 0,  y: -1 },
+  ArrowDown:  { x: 0,  y: 1  }, KeyS: { x: 0,  y: 1  },
+  ArrowLeft:  { x: -1, y: 0  }, KeyA: { x: -1, y: 0  },
+  ArrowRight: { x: 1,  y: 0  }, KeyD: { x: 1,  y: 0  },
+};
+
+function queueDir(d) {
+  const last = queue.length ? queue[queue.length - 1] : dir;
+  if (d.x === last.x && d.y === last.y) return;        // no-op
+  if (d.x === -last.x && d.y === -last.y) return;      // no instant reversal
+  if (queue.length < 2) queue.push(d);
+}
+
+window.addEventListener('keydown', e => {
+  const d = DIRS[e.code];
+  if (d || e.code === 'Space') e.preventDefault();     // keep the page from scrolling
+
+  switch (state) {
+    case 'start':
+      if (d) startGame(d);
+      else if (e.code === 'Space' || e.code === 'Enter') startGame();
+      break;
+    case 'playing':
+      if (d) queueDir(d);
+      else if (e.code === 'KeyP' || e.code === 'Space') pause();
+      else if (e.code === 'KeyR') startGame();
+      break;
+    case 'paused':
+      if (d) { resume(); queueDir(d); }
+      else if (e.code === 'KeyP' || e.code === 'Space' || e.code === 'Enter') resume();
+      else if (e.code === 'KeyR') startGame();
+      break;
+    case 'over':
+      if (e.code === 'KeyR' || e.code === 'Enter' || e.code === 'Space') startGame();
+      break;
+  }
+});
+
+$('btn-start').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); startGame(); });
+$('btn-restart').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); startGame(); });
+btnPause.addEventListener('click', e => {
+  e.stopPropagation(); e.currentTarget.blur();
+  if (state === 'playing') pause();
+  else if (state === 'paused') resume();
+});
+ovStart.addEventListener('click', () => startGame());
+ovPause.addEventListener('click', () => resume());
+ovOver.addEventListener('click', () => { if (state === 'over') startGame(); });
+
+// courtesy pause when the tab loses focus
+window.addEventListener('blur', pause);
+document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+
+/* ═══════════════ touch: swipe to steer ═══════════════ */
+// Same queueDir() buffer and reversal guard as the keyboard — one steering
+// path for both input methods. A swipe commits after ~22px of travel and
+// re-anchors, so a single continuous drag can chain turns without lifting.
+
+const SWIPE_MIN = 22;                 // px of travel before a swipe commits
+let touchId = null, tx = 0, ty = 0;
+
+document.addEventListener('touchstart', e => {
+  if (touchId !== null) return;       // first finger owns steering
+  const t = e.changedTouches[0];
+  touchId = t.identifier; tx = t.clientX; ty = t.clientY;
+}, { passive: true });                // taps must still become clicks
+
+document.addEventListener('touchmove', e => {
+  if (touchId === null) return;
+  e.preventDefault();                 // no scrolling / pull-to-refresh mid-gesture
+  for (const t of e.changedTouches) {
+    if (t.identifier !== touchId) continue;
+    const dx = t.clientX - tx, dy = t.clientY - ty;
+    if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) continue;
+    const d = Math.abs(dx) > Math.abs(dy)
+      ? { x: Math.sign(dx) || 1, y: 0 }
+      : { x: 0, y: Math.sign(dy) || 1 };
+    if (state === 'playing') queueDir(d);
+    else if (state === 'paused') { resume(); queueDir(d); }
+    else if (state === 'start') startGame(d);
+    // re-anchor so one continuous drag can chain turns
+    tx = t.clientX; ty = t.clientY;
+  }
+}, { passive: false });
+
+document.addEventListener('touchend', e => {
+  for (const t of e.changedTouches)
+    if (t.identifier === touchId) { touchId = null; break; }
+}, { passive: true });
+
+// stop iOS Safari's pinch gesture (it can ignore the viewport meta)
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('gesturechange', e => e.preventDefault());
+// no long-press context menu on the board
+frameEl.addEventListener('contextmenu', e => e.preventDefault());
+
+/* ═══════════════ rendering ═══════════════ */
+
+let vignette = null;
+function getVignette() {
+  if (!vignette) {
+    vignette = ctx.createRadialGradient(SIZE/2, SIZE/2, SIZE*.34, SIZE/2, SIZE/2, SIZE*.74);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(4,8,6,.32)');
+  }
+  return vignette;
+}
+
+function drawFood(now) {
+  if (food.x < 0) return;
+  const cx = (food.x + .5) * CELL, cy = (food.y + .5) * CELL;
+  const r = CELL * .34 * (1 + .06 * Math.sin(now / 280)); // gentle pulse
+  ctx.save();
+  ctx.shadowColor = 'rgba(255,107,94,.55)';
+  ctx.shadowBlur = 16;
+  const g = ctx.createRadialGradient(cx - r*.35, cy - r*.4, r*.15, cx, cy, r);
+  g.addColorStop(0, '#ffa38f'); g.addColorStop(.55, '#f4564e'); g.addColorStop(1, '#c22f3f');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
+  ctx.restore();
+  // stem
+  ctx.strokeStyle = '#7a4a2b'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(cx, cy - r + 1);
+  ctx.quadraticCurveTo(cx + 1, cy - r - 3, cx + 3, cy - r - 4); ctx.stroke();
+  // leaf
+  ctx.save();
+  ctx.translate(cx + 4, cy - r - 3); ctx.rotate(-.5);
+  ctx.fillStyle = '#5fbf63';
+  ctx.beginPath(); ctx.ellipse(0, 0, 4.2, 2.2, 0, 0, 7); ctx.fill();
+  ctx.restore();
+}
+
+function drawEffects(now) {
+  effects = effects.filter(fx => now - fx.t0 < 420);
+  for (const fx of effects) {
+    const p = (now - fx.t0) / 420, e = 1 - Math.pow(1 - p, 2); // ease-out
+    ctx.strokeStyle = `rgba(255,120,100,${(.55 * (1 - p)).toFixed(3)})`;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(fx.x, fx.y, CELL * (.3 + 1.6 * e), 0, 7); ctx.stroke();
+  }
+}
+
+function drawSnake() {
+  // interpolate every joint between its previous and current cell → smooth glide
+  const pts = snake.map((s, i) => {
+    const p = prevSnake[Math.min(i, prevSnake.length - 1)] || s;
+    return { x: (lerp(p.x, s.x, interp) + .5) * CELL,
+             y: (lerp(p.y, s.y, interp) + .5) * CELL };
+  });
+
+  // body: stroked segments, tail → head, tapering and brightening toward the head
+  const n = pts.length;
+  ctx.lineCap = 'round';
+  for (let i = n - 1; i > 0; i--) {
+    const k = 1 - i / Math.max(1, n - 1);
+    ctx.strokeStyle = segColor(k);
+    ctx.lineWidth = CELL * (.5 + .22 * k);
+    ctx.beginPath();
+    ctx.moveTo(pts[i].x, pts[i].y);
+    ctx.lineTo(pts[i - 1].x, pts[i - 1].y);
+    ctx.stroke();
+  }
+
+  // head — a touch larger, with a soft glow and eyes that face travel direction
+  const h = pts[0];
+  let dx = dir.x, dy = dir.y;
+  if (n > 1) {
+    const vx = h.x - pts[1].x, vy = h.y - pts[1].y, m = Math.hypot(vx, vy) || 1;
+    dx = vx / m; dy = vy / m;
+  }
+  ctx.save();
+  ctx.shadowColor = 'rgba(163,241,96,.45)';
+  ctx.shadowBlur = 14;
+  ctx.fillStyle = '#bdf26b';
+  ctx.beginPath(); ctx.arc(h.x, h.y, CELL * .46, 0, 7); ctx.fill();
+  ctx.restore();
+  const px = -dy, py = dx;
+  for (const s of [-1, 1]) {
+    const ex = h.x + dx * CELL * .10 + px * s * CELL * .17;
+    const ey = h.y + dy * CELL * .10 + py * s * CELL * .17;
+    ctx.fillStyle = '#f2fbee';
+    ctx.beginPath(); ctx.arc(ex, ey, CELL * .115, 0, 7); ctx.fill();
+    ctx.fillStyle = '#132419';
+    ctx.beginPath(); ctx.arc(ex + dx * CELL * .045, ey + dy * CELL * .045, CELL * .055, 0, 7); ctx.fill();
+  }
+}
+
+function draw(now) {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, SIZE, SIZE);
+
+  // board + faint checkerboard
+  ctx.fillStyle = '#0d1611';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  ctx.fillStyle = 'rgba(255,255,255,.014)';
+  for (let y = 0; y < ROWS; y++)
+    for (let x = 0; x < COLS; x++)
+      if ((x + y) & 1) ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+
+  drawFood(now);
+  drawEffects(now);
+  drawSnake();
+
+  // vignette
+  ctx.fillStyle = getVignette();
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // death flash
+  if (deathAt) {
+    const a = .32 * (1 - (now - deathAt) / 480);
+    if (a > 0) { ctx.fillStyle = `rgba(244,86,78,${a.toFixed(3)})`; ctx.fillRect(0, 0, SIZE, SIZE); }
+  }
+}
+
+/* ═══════════════ main loop ═══════════════ */
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(now - last, 100); // clamp hiccups / hidden-tab gaps
+  last = now;
+
+  if (state === 'playing') {
+    acc += dt;
+    let guard = 0;
+    while (acc >= stepMs && guard++ < 10) {
+      step();
+      acc -= stepMs;
+      if (state !== 'playing') { acc = 0; break; } // died mid-burst
+    }
+    interp = Math.min(1, acc / stepMs);
+  }
+
+  draw(now);
+  requestAnimationFrame(frame);
+}
+
+/* ═══════════════ boot ═══════════════ */
+
+reset();
+show(ovStart);
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>

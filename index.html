@@ -1,0 +1,1860 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#090d0f">
+<title>DEAD LINE — graveyard shift</title>
+<!--
+  ─────────────────────────────────────────────────────────────
+  DEAD LINE · a single-file arcade game (graveyard shift)
+  First, pick a side — HUMAN or ZOMBIE (1 / 2, arrows + Enter, or tap).
+  Controls:
+    Arrow keys or WASD ... steer
+    P or Space ........... pause / resume
+    R .................... replay (same role)
+    C / Esc .............. back to role select
+    Enter / Space ........ confirm on start & game-over screens
+    Touch ............... swipe anywhere to steer · tap overlays to
+                         start/resume/replay · pause button in the HUD
+  As HUMAN (current gameplay):
+    · Wandering humans are your recruits — touch them with your head
+      to grow the line. Headbutting zombies scores but doesn't grow.
+    · Recruits come in classes: SURVIVORS are bulk · FIGHTERS (red
+      bandana) cut down zombies that catch the chain near them ·
+      HUNTERS (green cap) snipe the nearest zombie · MEDICS (white
+      helmet) slowly regrow lost recruits, up to your peak length.
+    · Zombies eat caught characters (~1.5s) AND unrecruited
+      wanderers. A catch on the HEAD, or dropping below 3 segments,
+      ends the run.
+    · Medkits trigger an adrenaline rush: zombies flee, slowed.
+  As ZOMBIE (the tables turn):
+    · Humans are skittish — they flee when you get close. Herd them
+      with your body and headbutt them to convert them into growth.
+    · Humans reaching your body wrestle free — they can knock
+      segments off your tail. A human reaching your head, or
+      scattering you below 3 segments, ends the run.
+    · Brains trigger a frenzy: the living scatter and slow down.
+  Shared: waves escalate every 25 seconds; walls and self-collision
+  kill; best scores are kept per role in localStorage
+  ("svz-best-human" / "svz-best-zombie"; legacy "svz-best" migrates).
+  ─────────────────────────────────────────────────────────────
+-->
+<style>
+  :root{
+    --bg:        #090d0f;
+    --panel:     #0f1514;
+    --board:     #0d1413;
+    --line:      rgba(163,241,96,.10);
+    --ink:       #e9f0ea;
+    --muted:     #7f938c;
+    --accent:    #a3f160;   /* lime — humans & primary actions */
+    --accent-2:  #2dd4bf;   /* teal */
+    --danger:    #e5484d;   /* blood / bites */
+    --zomb:      #8fae7a;   /* decayed green — the horde */
+    --brain:     #ff9ec7;   /* pink — brains & frenzy */
+    --sans: "Avenir Next","Century Gothic","Segoe UI","Helvetica Neue",sans-serif;
+    --mono: ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  html{ overscroll-behavior:none; }            /* no scroll chaining / pull-to-refresh */
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:
+      radial-gradient(1100px 520px at 50% -140px, #17242c 0%, var(--bg) 62%),
+      var(--bg);
+    min-height:100vh;
+    min-height:100dvh;                         /* stable under mobile browser chrome */
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+    overscroll-behavior:none;
+    touch-action:none;                         /* the whole page is a game surface */
+    padding:28px 16px;
+    padding-top:max(28px, env(safe-area-inset-top));
+    padding-bottom:max(28px, env(safe-area-inset-bottom));
+    padding-left:max(16px, env(safe-area-inset-left));
+    padding-right:max(16px, env(safe-area-inset-right));
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;                /* no long-press callout */
+    -webkit-tap-highlight-color:transparent;    /* no gray tap flash */
+    -webkit-font-smoothing:antialiased;
+  }
+  /* night sky: pale moon up top, grave-fog below */
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none;
+    background:
+      radial-gradient(240px 240px at 84% 4%, rgba(215,228,244,.10), transparent 70%),
+      radial-gradient(760px 520px at 88% 112%, rgba(143,174,122,.06), transparent 62%),
+      radial-gradient(620px 420px at 8% 104%, rgba(45,212,191,.05), transparent 60%);
+  }
+  /* film grain — inline SVG turbulence, no assets */
+  .grain{
+    position:fixed; inset:0; pointer-events:none; opacity:.05; z-index:5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .stage{
+    position:relative; z-index:1;
+    display:flex; flex-direction:column; align-items:center;
+    gap:22px;
+  }
+
+  /* ── masthead ─────────────────────────────────────────── */
+  .masthead{ text-align:center; }
+  .kicker{
+    font:600 10px/1 var(--mono);
+    letter-spacing:.46em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:10px;
+  }
+  .title{
+    font-size:clamp(19px,4.2vw,27px); font-weight:800;
+    letter-spacing:.2em; text-indent:.2em; text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .title .vs{
+    font-size:.5em; font-weight:600; font-style:italic; text-transform:lowercase;
+    letter-spacing:.06em; text-indent:0;
+    color:var(--danger); margin:0 .35em; vertical-align:.15em;
+  }
+  .title .zomb{ color:var(--zomb); }
+
+  /* ── board frame ─────────────────────────────────────── */
+  .frame{
+    width:min(520px, 92vw, calc(100vh - 250px));
+    width:min(520px, 92vw, calc(100dvh - 250px));
+    border-radius:18px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    box-shadow:
+      0 34px 80px -24px rgba(0,0,0,.75),
+      0 0 0 1px rgba(0,0,0,.4),
+      0 0 60px -18px rgba(143,174,122,.12),
+      inset 0 1px 0 rgba(255,255,255,.05);
+    overflow:hidden;
+  }
+  .hud{
+    display:flex; align-items:center; gap:18px;
+    padding:13px 16px;
+    border-bottom:1px solid var(--line);
+  }
+  .hud-right{ margin-left:auto; display:flex; align-items:center; gap:14px; }
+  .stat{ display:flex; align-items:baseline; gap:8px; }
+  .label{
+    font:600 9.5px/1 var(--mono);
+    letter-spacing:.22em; text-transform:uppercase; color:var(--muted);
+  }
+  .value{
+    font:700 16px/1 var(--mono); font-variant-numeric:tabular-nums;
+    display:inline-block; /* transformable for the pop */
+  }
+  #best{ color:var(--muted); }
+  #wave{ color:var(--zomb); }
+  #score.pop{ animation:pop .32s ease; }
+  @keyframes pop{
+    35%{ transform:scale(1.3); color:var(--accent); }
+  }
+  @media (max-width:430px){
+    .hud{ gap:10px; padding:12px 10px; }
+    .label{ font-size:8.5px; letter-spacing:.14em; }
+    .stat{ gap:6px; }
+    .value{ font-size:14px; }
+  }
+
+  .board{ position:relative; }
+  canvas{ display:block; width:100%; height:auto; }
+
+  /* wave / frenzy announcements (non-blocking) */
+  .toast{
+    position:absolute; left:50%; top:38%;
+    transform:translate(-50%,-50%);
+    font:700 15px/1 var(--sans);
+    letter-spacing:.3em; text-indent:.3em; text-transform:uppercase;
+    color:var(--ink);
+    text-shadow:0 0 24px rgba(163,241,96,.5), 0 2px 10px rgba(0,0,0,.7);
+    opacity:0; pointer-events:none; z-index:3; white-space:nowrap;
+  }
+  .toast.pink{ color:var(--brain); text-shadow:0 0 24px rgba(255,158,199,.6), 0 2px 10px rgba(0,0,0,.7); }
+  .toast.go{ animation:toast 1.9s ease forwards; }
+  @keyframes toast{
+    0%{ opacity:0; transform:translate(-50%,-42%) scale(.92); }
+    15%{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+    75%{ opacity:1; }
+    100%{ opacity:0; transform:translate(-50%,-62%) scale(1); }
+  }
+
+  /* rush / frenzy meter — visible while the buff lasts */
+  .frenzy{
+    position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    display:none; align-items:center; gap:8px;
+    z-index:3; pointer-events:none;
+  }
+  .frenzy.on{ display:flex; }
+  .frenzy > span{
+    font:700 9px/1 var(--mono); letter-spacing:.3em; text-transform:uppercase;
+    color:var(--brain); text-shadow:0 0 12px rgba(255,158,199,.8);
+  }
+  .frenzy-track{
+    width:110px; height:4px; border-radius:99px;
+    background:rgba(255,158,199,.16); overflow:hidden;
+  }
+  .frenzy-fill{
+    display:block; height:100%; border-radius:inherit;
+    background:linear-gradient(90deg,#f27ba8,#ff9ec7);
+    box-shadow:0 0 12px rgba(255,158,199,.8);
+  }
+  /* human role: adrenaline rush is lime, not pink */
+  .frenzy.alt > span{ color:var(--accent); text-shadow:0 0 12px rgba(163,241,96,.8); }
+  .frenzy.alt .frenzy-track{ background:rgba(163,241,96,.16); }
+  .frenzy.alt .frenzy-fill{
+    background:linear-gradient(90deg,#a3f160,#d8f79c);
+    box-shadow:0 0 12px rgba(163,241,96,.8);
+  }
+
+  /* ── overlays ────────────────────────────────────────── */
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; padding:24px; text-align:center;
+    background:rgba(8,13,11,.76);
+    -webkit-backdrop-filter:blur(7px); backdrop-filter:blur(7px);
+    opacity:0; pointer-events:none;
+    transition:opacity .28s ease;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; cursor:pointer; }
+  .overlay > *{
+    opacity:0; transform:translateY(12px);
+    transition:opacity .38s cubic-bezier(.2,.7,.2,1), transform .38s cubic-bezier(.2,.7,.2,1);
+  }
+  .overlay.show > *{ opacity:1; transform:none; }
+  .overlay.show > :nth-child(1){ transition-delay:.04s }
+  .overlay.show > :nth-child(2){ transition-delay:.10s }
+  .overlay.show > :nth-child(3){ transition-delay:.16s }
+  .overlay.show > :nth-child(4){ transition-delay:.22s }
+  .overlay.show > :nth-child(5){ transition-delay:.28s }
+  .overlay.show > :nth-child(6){ transition-delay:.34s }
+  .overlay.show > :nth-child(7){ transition-delay:.40s }
+
+  .ov-kicker{
+    font:600 10px/1 var(--mono);
+    letter-spacing:.44em; text-transform:uppercase;
+    color:var(--muted);
+  }
+  .ov-title{
+    font-size:26px; font-weight:800;
+    letter-spacing:.2em; text-indent:.2em; text-transform:uppercase;
+  }
+  .ov-text{ font-size:13px; color:var(--muted); letter-spacing:.04em; }
+  .ov-hint{
+    font:500 11px/1.7 var(--mono); color:var(--muted); letter-spacing:.08em;
+  }
+  .ov-hint kbd{ margin:0 2px; }
+  .pulse{ animation:pulse 1.8s ease-in-out infinite; }
+  @keyframes pulse{ 50%{ opacity:.38; } }
+
+  /* ── role select cards ───────────────────────────────── */
+  .roles{
+    display:flex; gap:14px; justify-content:center;
+    max-width:100%;
+  }
+  .role-card{
+    appearance:none; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:9px;
+    width:min(172px, 42vw);
+    padding:22px 12px 16px;
+    background:#101814;
+    border:1px solid #2a3830; border-radius:16px;
+    color:var(--ink); font-family:var(--sans);
+    transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+  .role-card:hover{ transform:translateY(-3px); }
+  .role-card:focus-visible{ outline:2px solid var(--accent-2); outline-offset:3px; }
+  .role-card.human{ --card-accent:#a3f160; --card-glow:rgba(163,241,96,.30); }
+  .role-card.zombie{ --card-accent:#8fae7a; --card-glow:rgba(143,174,122,.30); }
+  .role-card.sel{
+    border-color:var(--card-accent);
+    box-shadow:0 0 0 1px var(--card-accent), 0 0 36px -4px var(--card-glow);
+    transform:translateY(-3px);
+  }
+  .role-name{
+    font:700 16px/1 var(--sans);
+    letter-spacing:.22em; text-indent:.22em; text-transform:uppercase;
+  }
+  .role-card.human .role-name{ color:var(--accent); }
+  .role-card.zombie .role-name{ color:var(--zomb); }
+  .role-tag{ font-size:10.5px; color:var(--muted); letter-spacing:.04em; line-height:1.5; }
+  .role-best{
+    font:600 11px/1 var(--mono); letter-spacing:.14em;
+    color:var(--muted); text-transform:uppercase;
+    margin-top:2px;
+  }
+  .role-best b{ color:#c6d6c9; font-weight:700; }
+  .role-key{ margin-top:4px; }
+
+  .legend{ list-style:none; text-align:left; }
+  .legend li{
+    display:flex; align-items:center; gap:9px;
+    font:500 12px/1.5 var(--sans); color:#b9c6bd;
+  }
+  .dot{ width:8px; height:8px; border-radius:50%; flex:none; }
+  .d-zomb{ background:var(--zomb); box-shadow:0 0 8px rgba(143,174,122,.6); }
+  .d-hum{ background:#e8c39e; box-shadow:0 0 8px rgba(232,195,158,.5); }
+  .d-brain{ background:var(--brain); box-shadow:0 0 8px rgba(255,158,199,.6); }
+  .d-med{ background:#d8e6df; box-shadow:0 0 8px rgba(163,241,96,.6); }
+.d-bite{ background:var(--danger); box-shadow:0 0 8px rgba(229,72,77,.6); }
+  .d-fight{ background:#d8443f; box-shadow:0 0 8px rgba(216,68,63,.6); }
+  .d-hunt{ background:#5ac8b0; box-shadow:0 0 8px rgba(90,200,176,.6); }
+
+  .final{ display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .final .big{
+    font:700 42px/1 var(--mono); font-variant-numeric:tabular-nums;
+    color:var(--accent); text-shadow:0 0 26px rgba(163,241,96,.35);
+  }
+  .pill{
+    font:700 10px/1 var(--mono);
+    letter-spacing:.24em; text-transform:uppercase; text-indent:.24em;
+    color:#101907; background:var(--accent);
+    padding:7px 14px; border-radius:999px;
+    box-shadow:0 0 26px rgba(163,241,96,.35);
+    animation:pillPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pillPulse{ 50%{ transform:scale(1.05); } }
+
+  /* quiet inline link (change role) */
+  .link-btn{
+    appearance:none; background:none; border:0; cursor:pointer;
+    font:600 10.5px/1 var(--mono);
+    letter-spacing:.2em; text-transform:uppercase;
+    color:var(--muted); padding:8px 12px; border-radius:8px;
+    transition:color .15s ease, background .15s ease;
+  }
+  .link-btn:hover{ color:var(--ink); background:rgba(255,255,255,.05); }
+  .link-btn:focus-visible{ outline:2px solid var(--accent-2); outline-offset:2px; }
+
+  /* ── buttons ─────────────────────────────────────────── */
+  .btn{
+    appearance:none; border:0; cursor:pointer;
+    display:inline-flex; align-items:center; gap:9px;
+    font:700 12.5px/1 var(--sans);
+    letter-spacing:.16em; text-transform:uppercase; text-indent:.16em;
+    padding:14px 28px; border-radius:11px;
+    color:#0c1207; background:var(--accent);
+    box-shadow:
+      0 8px 24px -8px rgba(163,241,96,.5),
+      inset 0 1px 0 rgba(255,255,255,.4);
+    transition:transform .16s ease, filter .16s ease, box-shadow .16s ease;
+  }
+  .btn:hover{
+    transform:translateY(-2px); filter:brightness(1.08);
+    box-shadow:0 14px 30px -8px rgba(163,241,96,.6), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .btn:active{ transform:translateY(0) scale(.97); filter:brightness(.94); }
+  .btn:focus-visible{ outline:2px solid var(--accent-2); outline-offset:3px; }
+  .btn svg{ flex:none; }
+
+  /* ── small icon button (pause) — comfortable touch hit area ── */
+  .icon-btn{
+    appearance:none; cursor:pointer;
+    width:44px; height:44px; border-radius:12px;
+    border:1px solid #2a3830; background:#18231e; color:#c6d6c9;
+    display:inline-flex; align-items:center; justify-content:center;
+    transition:background .15s ease, color .15s ease, transform .1s ease;
+  }
+  .icon-btn:hover{ background:#1f2b25; color:var(--ink); }
+  .icon-btn:active{ transform:scale(.92); }
+  .icon-btn:focus-visible{ outline:2px solid var(--accent-2); outline-offset:2px; }
+  @media (pointer:fine){ .icon-btn{ width:36px; height:36px; border-radius:10px; } }
+  #btn-pause .ic-play{ display:none; }
+  #btn-pause.is-paused .ic-pause{ display:none; }
+  #btn-pause.is-paused .ic-play{ display:block; }
+
+  /* ── footer hints ───────────────────────────────────── */
+  .hints{
+    display:flex; align-items:center; flex-wrap:wrap; justify-content:center;
+    gap:12px; color:var(--muted); font:500 11px/1 var(--mono); letter-spacing:.06em;
+  }
+  kbd{
+    font:600 11px/1 var(--mono);
+    color:#c6d6c9;
+    background:#18231e;
+    border:1px solid #2a3830; border-bottom-width:2px;
+    border-radius:6px; padding:4px 7px;
+    display:inline-block;
+  }
+  .cluster{ display:inline-flex; gap:4px; }
+  .or{ font-size:10px; opacity:.75; }
+  .sep{ width:3px; height:3px; border-radius:50%; background:var(--muted); opacity:.6; }
+
+  /* death / bite / devour shakes */
+  .frame.shake-sm{ animation:shakeSm .22s ease; }
+  @keyframes shakeSm{
+    25%{ transform:translate(2px,-1px); }
+    75%{ transform:translate(-2px,1px); }
+  }
+  .frame.shake{ animation:shake .45s cubic-bezier(.36,.07,.19,.97); }
+  @keyframes shake{
+    10%,90%{ transform:translate(-2px,1px); }
+    20%,80%{ transform:translate(3px,-1px); }
+    30%,50%,70%{ transform:translate(-4px,2px); }
+    40%,60%{ transform:translate(4px,-2px); }
+  }
+  .frame.shake-lg{ animation:shakeLg .55s cubic-bezier(.36,.07,.19,.97); }
+  @keyframes shakeLg{
+    10%,90%{ transform:translate(-4px,2px); }
+    20%,80%{ transform:translate(6px,-3px); }
+    30%,50%,70%{ transform:translate(-7px,3px); }
+    40%,60%{ transform:translate(7px,-3px); }
+  }
+
+  /* touch vs. keyboard hint text */
+  .touch-only{ display:none; }
+  @media (pointer:coarse){
+    .touch-only{ display:revert; }
+    .key-only{ display:none; }
+    .btn{ padding:17px 34px; font-size:14px; border-radius:13px; }
+    .role-card{ padding:24px 12px 18px; }
+    .role-name{ font-size:17px; }
+    .ov-title{ font-size:28px; }
+    .ov-text{ font-size:14.5px; }
+    .ov-hint{ font-size:12px; }
+    .legend li{ font-size:13px; }
+    .final .big{ font-size:46px; }
+  }
+
+  /* short screens (phones in landscape): shrink the chrome, feed the board */
+  @media (max-height:540px){
+    body{ padding-top:12px; padding-bottom:12px; }
+    .stage{ gap:10px; }
+    .kicker{ display:none; }
+    .title{ font-size:14px; letter-spacing:.14em; text-indent:.14em; }
+    .hints{ display:none; }
+    .frame{
+      width:min(520px, 92vw, calc(100vh - 140px));
+      width:min(520px, 92vw, calc(100dvh - 140px));
+    }
+  }
+  @media (max-height:740px){
+    .stage{ gap:14px; }
+    .kicker{ margin-bottom:6px; }
+  }
+</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<main class="stage">
+  <header class="masthead">
+    <p class="kicker">Graveyard shift</p>
+    <h1 class="title">DEAD<span class="vs">/</span><span class="zomb">LINE</span></h1>
+  </header>
+
+  <section class="frame" id="frame" aria-label="Dead Line game">
+    <div class="hud">
+      <div class="stat"><span class="label">Score</span><span class="value" id="score">0000</span></div>
+      <div class="stat"><span class="label">Wave</span><span class="value" id="wave">1</span></div>
+      <div class="stat"><span class="label">Kills</span><span class="value" id="kills">00</span></div>
+      <div class="hud-right">
+        <div class="stat"><span class="label">Best</span><span class="value" id="best">0000</span></div>
+        <button class="icon-btn" id="btn-pause" aria-label="Pause game">
+          <svg class="ic ic-pause" width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
+            <rect x="2.8" y="2.5" width="3.1" height="9" rx="1.3"/>
+            <rect x="8.1" y="2.5" width="3.1" height="9" rx="1.3"/>
+          </svg>
+          <svg class="ic ic-play" width="12" height="14" viewBox="0 0 10 12" aria-hidden="true">
+            <path d="M0 0 10 6 0 12Z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="board">
+      <canvas id="board" width="576" height="576" role="img" aria-label="Dead Line board"></canvas>
+
+      <div class="toast" id="toast">WAVE 2</div>
+      <div class="frenzy" id="frenzy"><span id="frenzy-label">Frenzy</span><div class="frenzy-track"><i class="frenzy-fill" id="frenzy-fill"></i></div></div>
+
+      <!-- role select -->
+      <div class="overlay" id="ov-role">
+        <p class="ov-kicker">Choose your side</p>
+        <div class="roles">
+          <button class="role-card human" id="card-human">
+            <svg width="42" height="42" viewBox="0 0 48 48" aria-hidden="true">
+              <circle cx="24" cy="17" r="9" fill="#e8c39e"/>
+              <path d="M15 15a9 9 0 0 1 18 0" fill="#2f3a30"/>
+              <circle cx="21" cy="18" r="1.4" fill="#20342a"/>
+              <circle cx="27" cy="18" r="1.4" fill="#20342a"/>
+              <rect x="15" y="26" width="18" height="13" rx="5" fill="#5a7d8c"/>
+              <path d="M15 31l-7 6" stroke="#e8c39e" stroke-width="3" stroke-linecap="round"/>
+              <path d="M33 30l7-6" stroke="#8d5a3b" stroke-width="3" stroke-linecap="round"/>
+              <path d="M20 40v5M28 40v5" stroke="#333d38" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <span class="role-name">Human</span>
+            <span class="role-tag">Outnumbered,<br>not outgunned</span>
+            <span class="role-best">Best <b id="best-human">0000</b></span>
+            <span class="role-key"><kbd>1</kbd></span>
+          </button>
+          <button class="role-card zombie" id="card-zombie">
+            <svg width="42" height="42" viewBox="0 0 48 48" aria-hidden="true">
+              <circle cx="24" cy="17" r="9" fill="#8fae7a"/>
+              <path d="M15 15a9 9 0 0 1 18 0" fill="#2f3a30"/>
+              <circle cx="20.5" cy="18" r="1.5" fill="#ff5f56"/>
+              <circle cx="27.5" cy="18" r="1.5" fill="#ff5f56"/>
+              <path d="M20 24h8" stroke="#1c261d" stroke-width="1.6" stroke-linecap="round"/>
+              <rect x="14" y="26" width="20" height="12" rx="5" fill="#4a5a48"/>
+              <path d="M14 30l-8 2" stroke="#8fae7a" stroke-width="3" stroke-linecap="round"/>
+              <path d="M34 30l8-2" stroke="#8fae7a" stroke-width="3" stroke-linecap="round"/>
+              <path d="M20 38v5M28 38v5" stroke="#39443a" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <span class="role-name">Zombie</span>
+            <span class="role-tag">The horde<br>is hungry</span>
+            <span class="role-best">Best <b id="best-zombie">0000</b></span>
+            <span class="role-key"><kbd>2</kbd></span>
+          </button>
+        </div>
+        <p class="ov-hint key-only">press <kbd>1</kbd> or <kbd>2</kbd> · arrows + <kbd>Enter</kbd></p>
+        <p class="ov-hint touch-only">tap your side</p>
+      </div>
+
+      <!-- ready screen (after picking a role) -->
+      <div class="overlay" id="ov-start">
+        <svg width="46" height="46" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <circle cx="42" cy="7" r="3.6" fill="#dfe8f4" opacity=".9"/>
+          <path d="M8 44V22c0-7 5.5-12 12-12s12 5 12 12v22" fill="#2b3833" stroke="#3d4a44" stroke-width="1.5"/>
+          <path d="M20 20v12M14 26h12" stroke="#1d2723" stroke-width="2" stroke-linecap="round"/>
+          <path d="M2 44h44" stroke="#233029" stroke-width="3" stroke-linecap="round"/>
+          <path d="M37 44c0-6 .8-10 3.5-13" stroke="#7da087" stroke-width="4" stroke-linecap="round"/>
+          <path d="M40.5 31V24M43.5 32l3-5.5M37.5 32l-2.5-5.5" stroke="#8fae7a" stroke-width="2.6" stroke-linecap="round"/>
+        </svg>
+        <h2 class="ov-title" id="ready-title">Survive.</h2>
+        <p class="ov-text" id="ready-text">Fight through the horde.</p>
+        <ul class="legend" id="legend"></ul>
+        <button class="btn" id="btn-start">
+          <svg width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><path d="M0 0 10 6 0 12Z" fill="currentColor"/></svg>
+          <span id="btn-start-label">Begin the run</span>
+        </button>
+        <button class="link-btn" id="btn-role-1">change role</button>
+        <p class="ov-hint pulse key-only">press any key to begin</p>
+        <p class="ov-hint pulse touch-only">tap to begin · swipe to steer</p>
+      </div>
+
+      <!-- pause screen -->
+      <div class="overlay" id="ov-pause">
+        <svg width="15" height="15" viewBox="0 0 14 14" fill="var(--accent)" aria-hidden="true">
+          <rect x="2.5" y="2" width="3.2" height="10" rx="1.4"/>
+          <rect x="8.3" y="2" width="3.2" height="10" rx="1.4"/>
+        </svg>
+        <h2 class="ov-title">Paused</h2>
+        <p class="ov-hint key-only">press <kbd>P</kbd> or <kbd>Space</kbd> — or click — to resume</p>
+        <p class="ov-hint touch-only">tap anywhere to resume</p>
+      </div>
+
+      <!-- game-over screen -->
+      <div class="overlay" id="ov-over">
+        <h2 class="ov-title" id="over-title">Devoured</h2>
+        <div class="final">
+          <span class="label">Final score</span>
+          <span class="big" id="final-score">0000</span>
+        </div>
+        <p class="ov-text" id="over-stats">0 kills · wave 1</p>
+        <p class="ov-text" id="over-best">Best 0000</p>
+        <span class="pill" id="pill-best" hidden>New best</span>
+        <button class="btn" id="btn-restart">
+          <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true">
+            <path d="M12 7A5 5 0 1 1 8.6 2.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M12.4 1.2v3.4H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Run it back</span>
+        </button>
+        <button class="link-btn" id="btn-role-2">change role</button>
+        <p class="ov-hint key-only">press <kbd>R</kbd> to replay · <kbd>C</kbd> to change role</p>
+        <p class="ov-hint touch-only">tap to replay · or change role below</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="hints" aria-label="Controls">
+    <span class="cluster"><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></span>
+    <span class="or">or</span>
+    <span class="cluster"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>
+    <span class="or touch-only">or</span>
+    <span class="touch-only">swipe anywhere to steer</span>
+    <span class="sep"></span>
+    <span><kbd>P</kbd> pause</span>
+    <span class="sep"></span>
+    <span><kbd>R</kbd> replay</span>
+    <span class="sep"></span>
+    <span><kbd>C</kbd> role</span>
+  </footer>
+</main>
+
+<script>
+(() => {
+'use strict';
+
+/* ═══════════════ setup ═══════════════ */
+
+const canvas = document.getElementById('board');
+const ctx    = canvas.getContext('2d');
+const $      = id => document.getElementById(id);
+const scoreEl = $('score'), waveEl = $('wave'), killsEl = $('kills'), bestEl = $('best');
+const frameEl = $('frame');
+const ovRole  = $('ov-role'), ovStart = $('ov-start'), ovPause = $('ov-pause'), ovOver = $('ov-over');
+const overTitle = $('over-title'), finalScore = $('final-score'),
+      overStats = $('over-stats'), overBest = $('over-best'), pillBest = $('pill-best');
+const btnPause  = $('btn-pause');
+const toastEl   = $('toast'), frenzyEl = $('frenzy'), frenzyFill = $('frenzy-fill'), frenzyLabel = $('frenzy-label');
+const cardHuman = $('card-human'), cardZombie = $('card-zombie');
+const bestHumanEl = $('best-human'), bestZombieEl = $('best-zombie');
+const readyTitle = $('ready-title'), readyText = $('ready-text'),
+      legendEl = $('legend'), btnStartLabel = $('btn-start-label');
+
+const COLS = 24, ROWS = 24, CELL = 24, SIZE = COLS * CELL;
+const DPR  = Math.min(window.devicePixelRatio || 1, 2);
+canvas.width  = SIZE * DPR;   // crisp on retina
+canvas.height = SIZE * DPR;
+
+const START_MS = 150;    // chain ms/step at the beginning
+const MIN_MS   = 70;     // chain top speed
+const STEP_DROP = 3;     // ms faster per kill
+const SNAKE_MIN = 3;     // below this, you lose
+const BITE_LOSS = 2;     // segments lost per wrestle/bite
+const FOE_CAP   = 10;    // max foes on the board
+const LUNGE_R = 7;       // cells: zombie lunge awareness
+const LUNGE_P = 0.6;     // chance to lunge when a segment is in range
+const HUMAN_FLEE_R = 6;  // cells: skittish humans bolt when you get this close
+const STUN_MS = 1500;    // foe knock-down after hitting your body (zombie role)
+const EAT_MS = 1500;       // zombie meal time after a catch — the escape window
+const MEAL_SPEEDUP = .97;  // fed zombies step this much faster, per meal
+const MEAL_CAP = 3;        // meals beyond this stop boosting speed/size
+const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
+const MEAL_SCALE_CAP = 1.12;
+const ALLY_CAP = 6;           // max wandering recruits on the board (human role)
+const ALLY_SPAWN_MS = 3500;   // pacing between recruit spawns
+const ALLY_FLEE_R = 4;        // wanderers bolt from zombies this close
+const ALLY_BEACON = 6;       // wanderers jog toward your head inside this radius
+const FIGHTER_REACH = 3;      // chain segments either way that a fighter guards
+const FIGHTER_CD = 12000;     // fighter save cooldown (ms) — not invincibility
+const HUNTER_RANGE = 5;       // cells — hunters shoot the nearest zombie in range
+const HUNTER_CD = 5000;       // hunter shot cooldown (ms)
+const MEDIC_CD = 12000;       // medic regrow cooldown (ms) — restores to your peak length
+const WAVE_MS  = 25000;  // time between waves
+const PICKUP_LIFE = 9000;
+const FRENZY_MS = 6000;
+
+const CARD    = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+const ZOMBIE_SKINS = ['#8fae7a','#7da087','#9ab389','#a3b78e'];
+const HUMAN_SKINS  = ['#e8c39e','#c68d5e','#8d5a3b','#f0d0b0','#a06a48'];
+const HAIRS   = ['#2f3a30','#41382b','#33424a','#2f2f3a'];
+const ZOMBIE_CLOTHES = ['#4a5a48','#5a5245','#3f4a52','#574a4a','#504058'];
+const HUMAN_SHIRTS   = ['#5a7d8c','#7d6a8c','#8c7d5a','#6a8c7d','#8c5a6a','#8c6a4a'];
+const GORE    = ['#7a1f2b','#a0303a','#8fae7a','#5d6e4e'];
+const ROT     = ['#4a5a48','#7a1f2b','#3f4a52','#6f9b6d'];
+const BRAIN_P = ['#ff9ec7','#f27ba8','#ffd3e4'];
+const MED_P   = ['#d8e6df','#a3f160','#e8f7d0'];
+
+const loadBestFor = r => {
+  try {
+    const cur = +localStorage.getItem('svz-best-' + r) || 0;
+    if (r === 'human') {
+      // the original release WAS the human role — carry its best over
+      const legacy = +localStorage.getItem('svz-best') || 0;
+      if (legacy > cur) { localStorage.setItem('svz-best-human', String(legacy)); return legacy; }
+    }
+    return cur;
+  } catch { return 0; }
+};
+const saveBest = v => { try { localStorage.setItem('svz-best-' + role, String(v)); } catch {} };
+
+/* ═══════════════ state ═══════════════ */
+
+let state = 'role';             // role | start | playing | paused | over
+let role = 'human';              // human | zombie
+let roleFocus = 'human';
+let snake = [], prevSnake = [], roster = []; // roster[i] = the character riding snake[i]
+let dir = { x: 1, y: 0 }, queue = [];
+let score = 0, best = loadBestFor('human'), wave = 1, kills = 0;
+let stepMs = START_MS, acc = 0, interp = 0;
+let gt = 0;                      // game clock — only advances while playing
+let foes = [], pickup = null, nextPickupAt = 0;
+let allies = [], nextAllySpawnAt = 0; // wandering recruits (human role)
+let pending = [];                     // characters waiting to join the tail
+let shots = [];                        // hunter tracers
+let maxLen = 3;                        // longest the chain has been — medics regrow up to this
+let nextSpawnAt = 0, waveNextAt = 0, frenzyUntil = 0;
+let stains = [], particles = [];
+let deathAt = 0, hurtAt = 0, headFlashUntil = 0, deathCause = '', overTimer = 0;
+
+/* ═══════════════ helpers ═══════════════ */
+
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+const fmt = (n, w = 4) => String(n).padStart(w, '0');
+const pick = a => a[(Math.random() * a.length) | 0];
+const shuffled = () => CARD.slice().sort(() => Math.random() - .5);
+
+const CLASS_WEIGHTS = [['survivor', .45], ['fighter', .25], ['hunter', .20], ['medic', .10]];
+function pickClass() {
+  let r = Math.random();
+  for (const [c, w] of CLASS_WEIGHTS) if ((r -= w) < 0) return c;
+  return 'survivor';
+}
+function makeChar(faction, cls) {
+  if (faction !== 'human') // zombies have no classes
+    return { skin: pick(ZOMBIE_SKINS), hair: pick(HAIRS), cloth: pick(ZOMBIE_CLOTHES), arms: Math.random() < .3 ? 1 : 2, phase: Math.random() * 7 };
+  return {
+    skin: pick(HUMAN_SKINS), hair: pick(HAIRS), cloth: pick(HUMAN_SHIRTS),
+    arms: 2, phase: Math.random() * 7,
+    cls: cls || pickClass(), // survivor | fighter | hunter | medic
+  };
+}
+const foeFaction = () => (role === 'human' ? 'zombie' : 'human');
+
+/* ═══════════════ role select ═══════════════ */
+
+function setRoleFocus(r) {
+  roleFocus = r;
+  cardHuman.classList.toggle('sel', r === 'human');
+  cardZombie.classList.toggle('sel', r === 'zombie');
+}
+
+function updateRoleCards() {
+  bestHumanEl.textContent  = fmt(loadBestFor('human'));
+  bestZombieEl.textContent = fmt(loadBestFor('zombie'));
+}
+
+const HUMAN_LEGEND = `
+  <li><i class="dot d-hum"></i><span>Touch wandering humans to recruit them — that's how you grow</span></li>
+  <li><i class="dot d-fight"></i><span>Fighters cut down zombies that catch the chain near them</span></li>
+  <li><i class="dot d-hunt"></i><span>Hunters snipe the nearest zombie, on a cooldown</span></li>
+  <li><i class="dot d-med"></i><span>Medics slowly regrow lost recruits, up to your peak</span></li>
+  <li><i class="dot d-bite"></i><span>Zombies eat whoever they catch — medkits still trigger a rush</span></li>`;
+const ZOMBIE_LEGEND = `
+  <li><i class="dot d-hum"></i><span>Headbutt humans to convert them into growth</span></li>
+  <li><i class="dot d-brain"></i><span>Brains trigger a frenzy — the living scatter</span></li>
+  <li><i class="dot d-bite"></i><span>Humans wrestle free — guard your tail</span></li>`;
+
+function applyRoleSkin() {
+  readyTitle.textContent = role === 'human' ? 'Survive.' : 'Convert.';
+  readyText.textContent  = role === 'human'
+    ? 'Gather the living. Guard the line.'
+    : 'The living are skittish — herd them with your tail.';
+  legendEl.innerHTML = role === 'human' ? HUMAN_LEGEND : ZOMBIE_LEGEND;
+  btnStartLabel.textContent = role === 'human' ? 'Begin the run' : 'Begin the hunt';
+  frenzyLabel.textContent = role === 'human' ? 'Rush' : 'Frenzy';
+  frenzyEl.classList.toggle('alt', role === 'human');
+}
+
+function pickRole(r) {
+  role = r;
+  best = loadBestFor(r);
+  setRoleFocus(r);
+  reset();
+  applyRoleSkin();
+  state = 'start';
+  show(ovStart);
+}
+
+function toRoleSelect() {
+  clearTimeout(overTimer);
+  reset();
+  updateRoleCards();
+  setRoleFocus(role);
+  state = 'role';
+  show(ovRole);
+}
+
+/* ═══════════════ game flow ═══════════════ */
+
+function reset() {
+  clearTimeout(overTimer);
+  const cy = ROWS >> 1, cx = COLS >> 1;
+  snake = [{ x: cx, y: cy }, { x: cx - 1, y: cy }, { x: cx - 2, y: cy }];
+  prevSnake = snake.map(s => ({ ...s }));
+  roster = [makeChar(role, 'survivor'), makeChar(role), makeChar(role)]; // the leader is always a plain survivor
+  dir = { x: 1, y: 0 }; queue = [];
+  score = 0; wave = 1; kills = 0;
+  stepMs = START_MS; acc = 0; interp = 0; gt = 0;
+  maxLen = snake.length; pending = []; shots = [];
+  foes = []; spawnFoe(); spawnFoe();
+  allies = [];
+  if (role === 'human') { spawnAlly(); spawnAlly(); } // early recruits are reachable
+  nextAllySpawnAt = ALLY_SPAWN_MS;
+  nextSpawnAt = 2500; waveNextAt = WAVE_MS;
+  pickup = null; nextPickupAt = 8000 + Math.random() * 4000;
+  frenzyUntil = 0;
+  stains = []; particles = [];
+  deathAt = 0; hurtAt = 0; headFlashUntil = 0; deathCause = '';
+  frameEl.classList.remove('shake-sm', 'shake', 'shake-lg');
+  toastEl.classList.remove('go');
+  frenzyEl.classList.remove('on');
+  updateHud();
+}
+
+function startGame(d) {
+  reset();
+  if (d && !(d.x === -1 && d.y === 0)) dir = d; // can't launch into your own body
+  state = 'playing';
+  hideOverlays();
+  syncPauseBtn();
+}
+
+function pause()  { if (state !== 'playing') return; state = 'paused';  show(ovPause); syncPauseBtn(); }
+function resume() { if (state !== 'paused')  return; state = 'playing'; hideOverlays(); syncPauseBtn(); }
+
+function syncPauseBtn() {
+  btnPause.classList.toggle('is-paused', state === 'paused');
+  btnPause.setAttribute('aria-label', state === 'paused' ? 'Resume game' : 'Pause game');
+}
+
+function step() {
+  prevSnake = snake.map(s => ({ ...s }));
+  if (queue.length) dir = queue.shift();
+
+  const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+  if (head.x < 0 || head.y < 0 || head.x >= COLS || head.y >= ROWS) return die('wall');
+  const grow = pending.length > 0;
+  for (let i = 0; i < snake.length; i++) {
+    if (snake[i].x === head.x && snake[i].y === head.y &&
+        !(i === snake.length - 1 && !grow)) return die('self');
+  }
+
+  snake.unshift(head);
+  if (grow) roster.push(pending.shift()); else snake.pop();
+  if (roster.length > snake.length) roster.length = snake.length;
+  if (snake.length > maxLen) maxLen = snake.length;
+
+  for (let i = foes.length - 1; i >= 0; i--) {
+    if (foes[i].x === head.x && foes[i].y === head.y) devour(i);
+  }
+  for (let i = allies.length - 1; i >= 0; i--) {
+    const a = allies[i];
+    if (a.x === head.x && a.y === head.y) recruit(i);
+  }
+  if (pickup && pickup.x === head.x && pickup.y === head.y) eatPickup();
+}
+
+function killFoe(f, pts) { // shared by headbutts, fighter saves and hunter shots
+  const i = foes.indexOf(f);
+  if (i < 0) return;
+  foes.splice(i, 1);
+  kills++;
+  score += pts;
+  stepMs = Math.max(MIN_MS, stepMs - STEP_DROP);
+  burst((f.x + .5) * CELL, (f.y + .5) * CELL, GORE, 14);
+  stains.push({ x: f.x, y: f.y, seed: (Math.random() * 1e9) | 0, bornAt: gt });
+  if (stains.length > 30) stains.shift();
+  shake('sm');
+  updateHud();
+}
+
+function devour(i) { // headbutt — points for the kill; recruitment is the human growth path
+  const f = foes[i];
+  killFoe(f, 25 * wave);
+  headFlashUntil = gt + 260;
+  if (role === 'zombie') // converting the living still grows the horde
+    pending.push(makeChar('zombie'), makeChar('zombie'));
+}
+
+function recruit(i) { // touch a wanderer with your head — they join the tail
+  const a = allies[i];
+  allies.splice(i, 1);
+  score += 10;
+  pending.push({ cls: a.cls, skin: a.skin, hair: a.hair, cloth: a.cloth, arms: 2, phase: a.phase });
+  burst((a.x + .5) * CELL, (a.y + .5) * CELL, MED_P, 8);
+  updateHud();
+}
+
+function eatPickup() {
+  pickup = null;
+  score += 150;
+  pending.push(makeChar(role)); // reinforcements
+  frenzyUntil = gt + FRENZY_MS;
+  nextPickupAt = gt + 15000 + Math.random() * 6000;
+  burst((snake[0].x + .5) * CELL, (snake[0].y + .5) * CELL, role === 'human' ? MED_P : BRAIN_P, 16);
+  showToast(role === 'human' ? 'ADRENALINE!' : 'FRENZY!', role !== 'human');
+  updateHud();
+}
+
+function bite(f, idx) {
+  // a foe reaching your chain pays for it — humans get thrown clear,
+  // zombies settle in and devour their catch on the spot
+  if (role === 'human') {
+    // a fighter within reach cuts the zombie down BEFORE it eats — no loss
+    let fj = -1;
+    for (let j = 0; j < roster.length; j++) {
+      const c = roster[j];
+      if (c.cls === 'fighter' && gt >= (c.cdUntil || 0) && Math.abs(j - idx) <= FIGHTER_REACH) { fj = j; break; }
+    }
+    if (fj >= 0) {
+      roster[fj].cdUntil = gt + FIGHTER_CD;
+      killFoe(f, 50); // gore, points, the save
+      return;
+    }
+  }
+  const caughtChar = roster[idx] || makeChar(role);
+  const lost = Math.min(BITE_LOSS, snake.length - 1);
+  for (let k = 0; k < lost; k++) {
+    const t = snake[snake.length - 1];
+    burst((t.x + .5) * CELL, (t.y + .5) * CELL, ROT, 8);
+    stains.push({ x: t.x, y: t.y, seed: (Math.random() * 1e9) | 0, bornAt: gt });
+    snake.pop();
+  }
+  if (stains.length > 30) stains.shift();
+  roster.length = snake.length;
+  prevSnake = snake.map(s => ({ ...s })); // freeze the glide; gore covers the snap
+
+  if (role === 'human') {
+    // the zombie devours the character it caught — hunched on the spot
+    f.meals = (f.meals || 0) + 1;
+    f.stunUntil = gt + EAT_MS; // occupied with the meal — this is the escape window
+    f.eat = {
+      until: gt + EAT_MS,
+      x: f.x, y: f.y,
+      fx: f.fx, fy: f.fy,
+      char: caughtChar,
+      nextGore: gt + 120,
+    };
+    burst((f.x + .5) * CELL, (f.y + .5) * CELL,
+      [caughtChar.skin, caughtChar.cloth, '#7a1f2b', '#a0303a'], 16);
+    stains.push({ x: f.x, y: f.y, seed: (Math.random() * 1e9) | 0, bornAt: gt });
+  } else {
+    // humans wrestle free — knock the foe back and stun it
+    let bx = f.px, by = f.py;
+    const blocked = (x, y) =>
+      x < 0 || y < 0 || x >= COLS || y >= ROWS ||
+      foes.some(o => o !== f && o.x === x && o.y === y) ||
+      snake.some(s => s.x === x && s.y === y);
+    if (blocked(bx, by)) {
+      const opts = shuffled().map(c => ({ x: f.x + c.x, y: f.y + c.y })).filter(c => !blocked(c.x, c.y));
+      if (opts.length) { bx = opts[0].x; by = opts[0].y; } else { bx = f.x; by = f.y; }
+    }
+    f.x = bx; f.y = by; f.px = bx; f.py = by;
+    f.nextAt = gt + STUN_MS; f.stepDur = STUN_MS; f.stunUntil = gt + STUN_MS;
+  }
+
+  hurtAt = gt + 350;
+  shake('md');
+  if (snake.length < SNAKE_MIN) { die('picked'); return; }
+  updateHud();
+}
+
+function die(cause) {
+  if (state !== 'playing') return;
+  state = 'over';
+  deathCause = cause;
+  deathAt = gt;
+  shake('lg');
+  finish();
+}
+
+function finish() {
+  const newBest = score > best;
+  if (newBest) { best = score; saveBest(best); }
+  const titles = role === 'human'
+    ? { wall: 'Splat.', self: 'Tangled.', head: 'Devoured.', picked: 'Picked clean.' }
+    : { wall: 'Splat.', self: 'Tangled.', head: 'Overwhelmed.', picked: 'Scattered.' };
+  overTitle.textContent  = titles[deathCause] || 'Game over';
+  finalScore.textContent = fmt(score);
+  overStats.textContent  = kills + (kills === 1 ? ' kill' : ' kills') + ' · wave ' + wave;
+  overBest.textContent   = 'Best ' + fmt(best);
+  pillBest.hidden        = !newBest;
+  updateHud();
+  overTimer = setTimeout(() => show(ovOver), 620); // let the death land first
+}
+
+/* ═══════════════ foes & pickup ═══════════════ */
+
+function occupied(x, y) {
+  if (snake.some(s => s.x === x && s.y === y)) return true;
+  if (foes.some(f => f.x === x && f.y === y)) return true;
+  if (allies.some(a => a.x === x && a.y === y)) return true;
+  return !!(pickup && pickup.x === x && pickup.y === y);
+}
+
+function freeCell(minHeadDist) {
+  const head = snake[0];
+  for (let i = 0; i < 300; i++) {
+    const x = (Math.random() * COLS) | 0, y = (Math.random() * ROWS) | 0;
+    if (occupied(x, y)) continue;
+    if (Math.max(Math.abs(x - head.x), Math.abs(y - head.y)) < minHeadDist) continue;
+    return { x, y };
+  }
+  const free = [];
+  for (let y = 0; y < ROWS; y++)
+    for (let x = 0; x < COLS; x++) {
+      if (occupied(x, y)) continue;
+      if (Math.max(Math.abs(x - head.x), Math.abs(y - head.y)) < minHeadDist) continue;
+      free.push({ x, y });
+    }
+  return free.length ? pick(free) : null;
+}
+
+function spawnFoe() {
+  const c = freeCell(5);
+  if (!c) return;
+  // zombie-role prey stay plain humans — classes are a human-role system
+  const ch = makeChar(foeFaction(), role === 'zombie' ? 'survivor' : undefined);
+  foes.push({
+    x: c.x, y: c.y, px: c.x, py: c.y,
+    fx: 0, fy: 1, dir: pick(CARD), mode: 'wander',
+    skin: ch.skin, hair: ch.hair, cloth: ch.cloth, arms: ch.arms, phase: ch.phase,
+    moveMs: Math.max(190, 310 - wave * 10 + Math.random() * 80),
+    nextAt: gt + 400 + Math.random() * 800,
+    lastMoveAt: gt, stepDur: 400, stunUntil: 0,
+  });
+}
+
+function spawnPickup() {
+  const c = freeCell(4);
+  if (!c) { nextPickupAt = gt + 5000; return; }
+  pickup = { x: c.x, y: c.y, expiresAt: gt + PICKUP_LIFE };
+}
+
+function updateFoes() {
+  // trickle-spawn toward the wave's horde size
+  if (foes.length < Math.min(FOE_CAP, 1 + wave) && gt >= nextSpawnAt) {
+    spawnFoe();
+    nextSpawnAt = gt + Math.max(1200, 4200 - wave * 350);
+  }
+  // waves
+  if (gt >= waveNextAt) {
+    wave++;
+    waveNextAt = gt + WAVE_MS;
+    showToast('WAVE ' + wave);
+    for (const f of foes) f.moveMs = Math.max(170, f.moveMs * .95);
+    updateHud();
+  }
+  // pickup lifecycle
+  if (!pickup && gt >= nextPickupAt) spawnPickup();
+  if (pickup && gt >= pickup.expiresAt) { pickup = null; nextPickupAt = gt + 9000 + Math.random() * 5000; }
+
+  for (const f of foes) {
+    if (state !== 'playing') break;
+    if (f.eat && gt < f.eat.until) {
+      if (gt >= f.eat.nextGore) { // chomp — blood drips off the meal
+        f.eat.nextGore = gt + 130 + Math.random() * 150;
+        burst((f.eat.x + .5) * CELL + (Math.random() - .5) * 9,
+              (f.eat.y + .5) * CELL + 6 + (Math.random() - .5) * 7,
+              ['#7a1f2b', '#a0303a'], 2);
+      }
+      continue; // busy eating — no movement
+    }
+    if (gt < f.stunUntil) continue;
+    if (gt >= f.nextAt) stepFoe(f);
+  }
+}
+
+function awayFrom(from, f) {
+  let d = {
+    x: Math.sign(f.x - from.x) || (Math.random() < .5 ? 1 : -1),
+    y: Math.sign(f.y - from.y) || 0,
+  };
+  if (d.x !== 0 && d.y !== 0) { if (Math.random() < .5) d.y = 0; else d.x = 0; }
+  return d;
+}
+
+function stepFoe(f) {
+  f.lastMoveAt = gt;
+  const head = snake[0];
+  const frenzy = gt < frenzyUntil;
+  let d, mode = 'wander';
+
+  if (role === 'human') {
+    // zombies hunt the snake
+    if (frenzy) {
+      d = awayFrom(head, f); mode = 'panic';
+    } else {
+      let bi = -1, bd = Infinity;                 // nearest chain segment — your body is the lure
+      for (let i = 0; i < snake.length; i++) {
+        const s = snake[i], dd = (s.x - f.x) ** 2 + (s.y - f.y) ** 2;
+        if (dd < bd) { bd = dd; bi = i; }
+      }
+      if (bi >= 0 && Math.sqrt(bd) < LUNGE_R && Math.random() < LUNGE_P) {
+        const s = snake[bi], dx = s.x - f.x, dy = s.y - f.y;
+        d = Math.abs(dx) > Math.abs(dy) ? { x: Math.sign(dx), y: 0 } : { x: 0, y: Math.sign(dy) };
+        mode = 'chase';
+      } else {
+        d = Math.random() < .55 ? f.dir : pick(CARD); // wander with momentum
+      }
+    }
+  } else {
+    // humans are skittish — flee the head, shiver when alone
+    const dist = Math.hypot(head.x - f.x, head.y - f.y);
+    if (frenzy) { d = awayFrom(head, f); mode = 'panic'; }
+    else if (dist < HUMAN_FLEE_R) { d = awayFrom(head, f); mode = 'panic'; }
+    else {
+      if (Math.random() < .12) { f.nextAt = gt + 250 + Math.random() * 450; return; } // shiver in place
+      d = Math.random() < .3 ? f.dir : pick(CARD); // nervous wander, low momentum
+    }
+  }
+  f.mode = mode;
+
+  // resolve the step (foes may share a cell with the chain — that's a bite/wrestle)
+  let nx = f.x, ny = f.y, moved = false;
+  for (const c of [d, ...shuffled()]) {
+    const tx = f.x + c.x, ty = f.y + c.y;
+    if (tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS) continue;
+    if (foes.some(o => o !== f && o.x === tx && o.y === ty)) continue;
+    nx = tx; ny = ty; moved = true; f.dir = c;
+    break;
+  }
+  if (!moved) { f.nextAt = gt + 150; return; }
+
+  f.px = f.x; f.py = f.y;
+  f.x = nx; f.y = ny;
+  f.fx = nx - f.px; f.fy = ny - f.py;
+  const speedMul = mode === 'chase' ? .8 : mode === 'panic' ? (frenzy ? 1.7 : .85) : 1;
+  const fed = Math.min(f.meals || 0, MEAL_CAP); // well-fed zombies hunt faster (capped)
+  f.nextAt = gt + f.moveMs * Math.pow(MEAL_SPEEDUP, fed) * speedMul;
+  f.stepDur = f.nextAt - gt;
+
+  const ai = allies.findIndex(a => a.x === nx && a.y === ny);
+  if (ai >= 0) { eatWanderer(f, ai); return; }
+  const idx = snake.findIndex(s => s.x === nx && s.y === ny);
+  if (idx === 0) { die('head'); return; }
+  if (idx > 0) bite(f, idx);
+}
+
+/* ═══════════════ wandering recruits (human role) ═══════════════ */
+
+function spawnAlly() {
+  const c = freeCell(3); // near-ish — early recruits should be reachable
+  if (!c) return;
+  const ch = makeChar('human'); // weighted class roll
+  allies.push({
+    x: c.x, y: c.y, px: c.x, py: c.y,
+    fx: 0, fy: 1, dir: pick(CARD), mode: 'wander', cls: ch.cls,
+    skin: ch.skin, hair: ch.hair, cloth: ch.cloth, arms: 2, phase: ch.phase,
+    moveMs: 300 + Math.random() * 70,
+    nextAt: gt + 300 + Math.random() * 500, lastMoveAt: gt, stepDur: 400,
+    stunUntil: 0, nextShot: 0,
+  });
+}
+
+function stepAlly(a) {
+  a.lastMoveAt = gt;
+  // nearest zombie threat
+  let zx = 0, zy = 0, zd = Infinity;
+  for (const f of foes) {
+    const d = Math.hypot(f.x - a.x, f.y - a.y);
+    if (d < zd) { zd = d; zx = f.x; zy = f.y; }
+  }
+  const head = snake[0];
+  let d;
+  if (zd < ALLY_FLEE_R) {
+    d = awayFrom({ x: zx, y: zy }, a); // bolt from the dead
+    a.mode = 'panic';
+  } else if (Math.max(Math.abs(head.x - a.x), Math.abs(head.y - a.y)) < ALLY_BEACON) {
+    const dx = head.x - a.x, dy = head.y - a.y; // jog toward the leader — they want in
+    d = Math.abs(dx) > Math.abs(dy) ? { x: Math.sign(dx), y: 0 } : { x: 0, y: Math.sign(dy) };
+    a.mode = 'jog';
+  } else {
+    if (Math.random() < .15) { a.nextAt = gt + 250 + Math.random() * 400; return; } // shiver
+    d = Math.random() < .45 ? a.dir : pick(CARD);
+    a.mode = 'wander';
+  }
+  // resolve — avoid walls, the chain, other wanderers and the dead
+  let nx = a.x, ny = a.y, moved = false;
+  for (const c of [d, ...shuffled()]) {
+    const tx = a.x + c.x, ty = a.y + c.y;
+    if (tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS) continue;
+    if (allies.some(o => o !== a && o.x === tx && o.y === ty)) continue;
+    if (foes.some(fo => fo.x === tx && fo.y === ty)) continue;
+    if (snake.some(se => se.x === tx && se.y === ty)) continue;
+    nx = tx; ny = ty; moved = true; a.dir = c;
+    break;
+  }
+  if (!moved) { a.nextAt = gt + 150; return; }
+  a.px = a.x; a.py = a.y; a.x = nx; a.y = ny;
+  a.fx = nx - a.px; a.fy = ny - a.py;
+  a.nextAt = gt + a.moveMs * (a.mode === 'panic' ? .85 : a.mode === 'jog' ? .9 : 1);
+  a.stepDur = a.nextAt - gt;
+}
+
+function tryShoot(shooter, x, y) { // hunters — hitscan on the nearest zombie in range
+  let best = null, bd = Infinity;
+  for (const f of foes) {
+    const d = Math.max(Math.abs(f.x - x), Math.abs(f.y - y));
+    if (d <= HUNTER_RANGE && d < bd) { bd = d; best = f; }
+  }
+  if (!best) return;
+  shooter.nextShot = gt + HUNTER_CD;
+  shots.push({ x1: (x + .5) * CELL, y1: (y + .5) * CELL, x2: (best.x + .5) * CELL, y2: (best.y + .5) * CELL, bornAt: gt });
+  killFoe(best, 40);
+}
+
+function eatWanderer(f, ai) { // zombies eat unrecruited wanderers too — urgency
+  const a = allies[ai];
+  allies.splice(ai, 1);
+  f.meals = (f.meals || 0) + 1;
+  f.stunUntil = gt + EAT_MS;
+  f.eat = { until: gt + EAT_MS, x: f.x, y: f.y, fx: f.fx, fy: f.fy, char: a, nextGore: gt + 120 };
+  burst((f.x + .5) * CELL, (f.y + .5) * CELL, [a.skin, a.cloth, '#7a1f2b', '#a0303a'], 14);
+  stains.push({ x: f.x, y: f.y, seed: (Math.random() * 1e9) | 0, bornAt: gt });
+}
+
+function updateAllies() {
+  if (role !== 'human') { allies = []; return; }
+  const target = Math.min(ALLY_CAP, 2 + (wave >> 1));
+  if (allies.length < target && gt >= nextAllySpawnAt) {
+    spawnAlly();
+    nextAllySpawnAt = gt + ALLY_SPAWN_MS;
+  }
+  for (const a of allies) {
+    if (state !== 'playing') break;
+    if (gt >= a.nextAt) stepAlly(a);
+    if (a.cls === 'hunter' && gt >= (a.nextShot || 0)) tryShoot(a, a.x, a.y); // wanderers shoot too
+  }
+  // chain abilities
+  for (let j = 0; j < roster.length; j++) {
+    if (state !== 'playing') break;
+    const c = roster[j], se = snake[j];
+    if (!c || !se) continue;
+    if (c.cls === 'hunter' && gt >= (c.nextShot || 0)) {
+      tryShoot(c, se.x, se.y);
+    } else if (c.cls === 'medic' && gt >= (c.nextHeal || 0) && snake.length < maxLen && pending.length < 3) {
+      c.nextHeal = gt + MEDIC_CD;
+      pending.push(makeChar('human', 'survivor')); // a fresh survivor regrows at the tail
+      burst((se.x + .5) * CELL, (se.y + .5) * CELL, MED_P, 6);
+    }
+  }
+}
+
+/* ═══════════════ overlays, hud & juice ═══════════════ */
+
+const overlays = [ovRole, ovStart, ovPause, ovOver];
+function show(el)      { overlays.forEach(o => o.classList.toggle('show', o === el)); }
+function hideOverlays(){ overlays.forEach(o => o.classList.remove('show')); }
+
+function updateHud() {
+  scoreEl.textContent = fmt(score);
+  waveEl.textContent  = wave;
+  killsEl.textContent = fmt(kills, 2);
+  bestEl.textContent  = fmt(best);
+}
+function popScore() { scoreEl.classList.remove('pop'); void scoreEl.offsetWidth; scoreEl.classList.add('pop'); }
+
+function showToast(text, pink) {
+  toastEl.textContent = text;
+  toastEl.classList.toggle('pink', !!pink);
+  toastEl.classList.remove('go'); void toastEl.offsetWidth; toastEl.classList.add('go');
+}
+
+function shake(kind) {
+  const cls = kind === 'sm' ? 'shake-sm' : kind === 'lg' ? 'shake-lg' : 'shake';
+  frameEl.classList.remove('shake-sm', 'shake', 'shake-lg');
+  void frameEl.offsetWidth;
+  frameEl.classList.add(cls);
+}
+
+function syncFrenzyBar() {
+  const on = gt < frenzyUntil && state !== 'over';
+  frenzyEl.classList.toggle('on', on);
+  if (on) frenzyFill.style.width = ((frenzyUntil - gt) / FRENZY_MS * 100).toFixed(1) + '%';
+}
+
+/* ═══════════════ input ═══════════════ */
+
+const DIRS = {
+  ArrowUp:    { x: 0,  y: -1 }, KeyW: { x: 0,  y: -1 },
+  ArrowDown:  { x: 0,  y: 1  }, KeyS: { x: 0,  y: 1  },
+  ArrowLeft:  { x: -1, y: 0  }, KeyA: { x: -1, y: 0  },
+  ArrowRight: { x: 1,  y: 0  }, KeyD: { x: 1,  y: 0  },
+};
+
+function queueDir(d) {
+  const last = queue.length ? queue[queue.length - 1] : dir;
+  if (d.x === last.x && d.y === last.y) return;        // no-op
+  if (d.x === -last.x && d.y === -last.y) return;      // no instant reversal
+  if (queue.length < 2) queue.push(d);
+}
+
+window.addEventListener('keydown', e => {
+  const d = DIRS[e.code];
+  if (d || e.code === 'Space' || (state === 'over' && e.code === 'Backspace')) e.preventDefault();
+
+  switch (state) {
+    case 'role':
+      if (e.code === 'Digit1' || e.code === 'Numpad1') pickRole('human');
+      else if (e.code === 'Digit2' || e.code === 'Numpad2') pickRole('zombie');
+      else if (d) setRoleFocus(d.x < 0 || d.y < 0 ? 'human' : 'zombie');
+      else if (e.code === 'Enter' || e.code === 'Space') pickRole(roleFocus);
+      break;
+    case 'start':
+      if (d) startGame(d);
+      else if (e.code === 'Space' || e.code === 'Enter') startGame();
+      else if (e.code === 'Escape' || e.code === 'Backspace') toRoleSelect();
+      break;
+    case 'playing':
+      if (d) queueDir(d);
+      else if (e.code === 'KeyP' || e.code === 'Space') pause();
+      else if (e.code === 'KeyR') startGame();
+      break;
+    case 'paused':
+      if (d) { resume(); queueDir(d); }
+      else if (e.code === 'KeyP' || e.code === 'Space' || e.code === 'Enter') resume();
+      else if (e.code === 'KeyR') startGame();
+      else if (e.code === 'Escape') toRoleSelect();
+      break;
+    case 'over':
+      if (e.code === 'KeyR' || e.code === 'Enter' || e.code === 'Space') startGame();
+      else if (e.code === 'KeyC' || e.code === 'Escape' || e.code === 'Backspace') toRoleSelect();
+      break;
+  }
+});
+
+$('btn-start').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); startGame(); });
+$('btn-restart').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); startGame(); });
+$('btn-role-1').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); toRoleSelect(); });
+$('btn-role-2').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); toRoleSelect(); });
+cardHuman.addEventListener('click', e => { e.stopPropagation(); pickRole('human'); });
+cardZombie.addEventListener('click', e => { e.stopPropagation(); pickRole('zombie'); });
+btnPause.addEventListener('click', e => {
+  e.stopPropagation(); e.currentTarget.blur();
+  if (state === 'playing') pause();
+  else if (state === 'paused') resume();
+});
+ovStart.addEventListener('click', () => startGame());
+ovPause.addEventListener('click', () => resume());
+ovOver.addEventListener('click', () => { if (state === 'over') startGame(); });
+
+// courtesy pause when the tab loses focus
+window.addEventListener('blur', pause);
+document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+
+/* ═══════════════ touch: swipe to steer ═══════════════ */
+// Same queueDir() buffer and reversal guard as the keyboard — one steering
+// path for both input methods. A swipe commits after ~22px of travel and
+// re-anchors, so a single continuous drag can chain turns without lifting.
+
+const SWIPE_MIN = 22;                 // px of travel before a swipe commits
+let touchId = null, tx = 0, ty = 0;
+
+document.addEventListener('touchstart', e => {
+  if (touchId !== null) return;       // first finger owns steering
+  const t = e.changedTouches[0];
+  touchId = t.identifier; tx = t.clientX; ty = t.clientY;
+}, { passive: true });                // taps must still become clicks
+
+document.addEventListener('touchmove', e => {
+  if (touchId === null) return;
+  e.preventDefault();                 // no scrolling / pull-to-refresh mid-gesture
+  for (const t of e.changedTouches) {
+    if (t.identifier !== touchId) continue;
+    const dx = t.clientX - tx, dy = t.clientY - ty;
+    if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) continue;
+    const d = Math.abs(dx) > Math.abs(dy)
+      ? { x: Math.sign(dx) || 1, y: 0 }
+      : { x: 0, y: Math.sign(dy) || 1 };
+    if (state === 'playing') queueDir(d);
+    else if (state === 'paused') { resume(); queueDir(d); }
+    else if (state === 'start') startGame(d);
+    // re-anchor so one continuous drag can chain turns
+    tx = t.clientX; ty = t.clientY;
+  }
+}, { passive: false });
+
+document.addEventListener('touchend', e => {
+  for (const t of e.changedTouches)
+    if (t.identifier === touchId) { touchId = null; break; }
+}, { passive: true });
+
+// stop iOS Safari's pinch gesture (it can ignore the viewport meta)
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('gesturechange', e => e.preventDefault());
+// no long-press context menu on the board
+frameEl.addEventListener('contextmenu', e => e.preventDefault());
+
+/* ═══════════════ rendering ═══════════════ */
+
+let vignette = null;
+function getVignette() {
+  if (!vignette) {
+    vignette = ctx.createRadialGradient(SIZE/2, SIZE/2, SIZE*.34, SIZE/2, SIZE/2, SIZE*.74);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(4,8,10,.34)');
+  }
+  return vignette;
+}
+
+function burst(x, y, colors, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, sp = 30 + Math.random() * 110;
+    particles.push({
+      x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+      bornAt: gt, life: 320 + Math.random() * 380,
+      color: pick(colors), r: 1.6 + Math.random() * 2.2,
+    });
+  }
+  if (particles.length > 260) particles.splice(0, particles.length - 260);
+}
+
+function drawFog(t) {
+  for (let i = 0; i < 2; i++) {
+    const speed = i ? 12 : 20;
+    const x = ((t * speed / 1000) % (SIZE + 520)) - 260 + (i ? 140 : 0);
+    const y = SIZE * (i ? .72 : .28);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, 300);
+    g.addColorStop(0, 'rgba(148,178,188,.045)');
+    g.addColorStop(1, 'rgba(148,178,188,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x - 300, y - 300, 600, 600);
+  }
+}
+
+function drawStains(t) {
+  stains = stains.filter(s => t - s.bornAt < 9000);
+  for (const s of stains) {
+    const a = .30 * (1 - (t - s.bornAt) / 9000);
+    let sd = s.seed;
+    const rnd = () => (sd = (sd * 9301 + 49297) % 233280) / 233280;
+    const cx = (s.x + .5) * CELL, cy = (s.y + .5) * CELL;
+    ctx.fillStyle = `rgba(110,28,40,${a.toFixed(3)})`;
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.arc(cx + (rnd() - .5) * CELL * .9, cy + (rnd() - .5) * CELL * .9, 2.5 + rnd() * 4.5, 0, 7);
+      ctx.fill();
+    }
+  }
+}
+
+/* ── characters (shared by your chain and the NPCs) ── */
+
+function drawZombieChar(cx, cy, t, c, o) {
+  const fx = o.fx || 0, fy = o.fy || 1;
+  const stunned = o.stunned;
+  const fleeing = o.fleeing;
+  const chasing = o.chasing;
+  const eating = o.eating;
+  const bob = stunned ? 0 : eating
+    ? 1.2 + Math.sin(t / 85 + c.phase) * 2.1 // hunched over the meal, gnawing
+    : Math.sin(t / (fleeing ? 70 : 130) + c.phase) * 1.6;
+  const wob = Math.sin(t / 340 + c.phase) * .07;
+  ctx.save();
+  ctx.translate(cx + fx * (chasing ? 1.4 : 0), cy + bob);
+  ctx.fillStyle = 'rgba(0,0,0,.30)';
+  ctx.beginPath(); ctx.ellipse(0, 5, 7.5, 3.4, 0, 0, 7); ctx.fill();
+  if (fleeing && !stunned) {
+    ctx.strokeStyle = 'rgba(120,200,220,.35)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(0, 0, 10.5, 0, 7); ctx.stroke();
+  }
+  if (o.scale && o.scale !== 1) ctx.scale(o.scale, o.scale);
+  ctx.rotate(wob + (o.fall || 0) + (eating ? Math.sin(t / 85) * .13 : 0));
+  const step = stunned ? 0 : Math.sin(t / 110 + c.phase) * 1.6;
+  // legs
+  ctx.strokeStyle = '#39443a'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-3, 1.5); ctx.lineTo(-3, 7 + step); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(3, 1.5);  ctx.lineTo(3, 7 - step);  ctx.stroke();
+  // torso (torn shirt)
+  ctx.fillStyle = c.cloth;
+  ctx.beginPath(); ctx.roundRect(-5.5, -5, 11, 9, 3); ctx.fill();
+  // arms reaching toward travel direction (some lost one)
+  ctx.strokeStyle = c.skin; ctx.lineWidth = 2.8;
+  const px = -fy, py = fx;
+  ctx.beginPath(); ctx.moveTo(-4, -3); ctx.lineTo(fx * 6 + px * 3, fy * 6 + py * 3); ctx.stroke();
+  if (c.arms === 2) {
+    ctx.beginPath(); ctx.moveTo(4, -3); ctx.lineTo(fx * 6 - px * 3, fy * 6 - py * 3); ctx.stroke();
+  }
+  // head
+  ctx.fillStyle = c.skin;
+  ctx.beginPath(); ctx.arc(0, -8.5, 4.6, 0, 7); ctx.fill();
+  ctx.fillStyle = c.hair;
+  ctx.beginPath(); ctx.arc(0, -8.5, 4.6, Math.PI * 1.12, Math.PI * 1.88); ctx.closePath(); ctx.fill();
+  // face
+  if (stunned) {
+    ctx.strokeStyle = '#1c261d'; ctx.lineWidth = 1.1;
+    for (const ex of [-1.8, 1.8]) {
+      ctx.beginPath();
+      ctx.moveTo(ex - 1.1, -10); ctx.lineTo(ex + 1.1, -7.8);
+      ctx.moveTo(ex + 1.1, -10); ctx.lineTo(ex - 1.1, -7.8);
+      ctx.stroke();
+    }
+  } else if (eating) {
+    // red eyes and a working jaw
+    ctx.fillStyle = '#ff5f56';
+    ctx.shadowColor = 'rgba(255,95,86,.8)'; ctx.shadowBlur = 4;
+    ctx.beginPath(); ctx.arc(-1.8, -9.3, .95, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(1.8, -9.3, .95, 0, 7); ctx.fill();
+    ctx.shadowBlur = 0;
+    const gape = 1 + 1.7 * Math.abs(Math.sin(t / 95));
+    ctx.fillStyle = '#1c261d';
+    ctx.beginPath(); ctx.arc(0, -6.1, gape, 0, 7); ctx.fill();
+  } else if (chasing || o.eyes === 'red' || o.eyes === 'frenzy') {
+    ctx.fillStyle = '#ff5f56';
+    ctx.shadowColor = 'rgba(255,95,86,.8)'; ctx.shadowBlur = 4;
+    ctx.beginPath(); ctx.arc(-1.8, -9.3, .95, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(1.8, -9.3, .95, 0, 7); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#1c261d'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-1.4, -6.2); ctx.lineTo(1.4, -6.6); ctx.stroke();
+  } else {
+    ctx.fillStyle = '#d8e6c8';
+    ctx.beginPath(); ctx.arc(-1.8, -9.3, .9, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(1.8, -9.3, .9, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#1c261d'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-1.4, -6.2); ctx.lineTo(1.4, -6.6); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawHumanChar(cx, cy, t, c, o) {
+  const fx = o.fx || 0, fy = o.fy || 1;
+  const stunned = o.stunned;
+  const bob = stunned ? 0 : Math.sin(t / 120 + c.phase) * 1.4;
+  ctx.save();
+  if (o.alpha != null) ctx.globalAlpha = o.alpha;
+  ctx.translate(cx + fx * (o.lean || 0), cy + bob);
+  ctx.fillStyle = 'rgba(0,0,0,.28)';
+  ctx.beginPath(); ctx.ellipse(0, 5, 6.8, 3.1, 0, 0, 7); ctx.fill();
+  if (o.panic && !stunned) {
+    ctx.strokeStyle = 'rgba(120,200,220,.35)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(0, 0, 10.5, 0, 7); ctx.stroke();
+  }
+  if (o.scale && o.scale !== 1) ctx.scale(o.scale, o.scale);
+  ctx.rotate(Math.sin(t / 300 + c.phase) * .05 + (o.fall || 0));
+  const step = stunned ? 0 : Math.sin(t / 100 + c.phase) * 1.5;
+  // legs
+  ctx.strokeStyle = '#333d38'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-3, 1.5); ctx.lineTo(-3, 7 + step); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(3, 1.5);  ctx.lineTo(3, 7 - step);  ctx.stroke();
+  // backpack (opposite of facing)
+  ctx.fillStyle = '#3a4640';
+  ctx.beginPath(); ctx.roundRect(-3 - fx * 3.2, -4 - fy * 3.2, 6, 7.5, 2); ctx.fill();
+  // torso (shirt)
+  ctx.fillStyle = c.cloth;
+  ctx.beginPath(); ctx.roundRect(-5.5, -5, 11, 9, 3); ctx.fill();
+  // arms pumping along the travel axis
+  const sw = Math.sin(t / 100 + c.phase) * 2.4;
+  ctx.strokeStyle = c.skin; ctx.lineWidth = 2.6;
+  ctx.beginPath(); ctx.moveTo(-4, -3); ctx.lineTo(-4 + fx * sw, -3 + fy * sw + 1.6); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(4, -3);  ctx.lineTo(4 - fx * sw, -3 - fy * sw + 1.6);  ctx.stroke();
+  // head + hair
+  ctx.fillStyle = c.skin;
+  ctx.beginPath(); ctx.arc(0, -8.5, 4.6, 0, 7); ctx.fill();
+  ctx.fillStyle = c.hair;
+  ctx.beginPath(); ctx.arc(0, -8.5, 4.6, Math.PI * 1.12, Math.PI * 1.88); ctx.closePath(); ctx.fill();
+  // class kit — readable at a glance
+  if (c.cls === 'fighter') { // red bandana
+    ctx.strokeStyle = '#d8443f'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, -8.5, 4.7, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
+  } else if (c.cls === 'hunter') { // green cap + brim + rifle
+    ctx.fillStyle = '#3d5a3f';
+    ctx.beginPath(); ctx.arc(0, -8.5, 4.7, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
+    ctx.fillRect(fx * 2.2 - 1.8, -9.1, 3.6, 1.6);
+    ctx.strokeStyle = '#7a6248'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(1 - fx * 1.5, -0.5 - fy * 1.5); ctx.lineTo(fx * 8 + 1, fy * 8 - 0.5); ctx.stroke();
+  } else if (c.cls === 'medic') { // white helmet + chest cross
+    ctx.fillStyle = '#e6e9e4';
+    ctx.beginPath(); ctx.arc(0, -8.5, 4.7, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#d8443f';
+    ctx.fillRect(-.6, -2.4, 1.2, 3.4); ctx.fillRect(-1.7, -1.3, 3.4, 1.2);
+  }
+  // face — direction-facing eyes
+  if (stunned) {
+    ctx.strokeStyle = '#1c261d'; ctx.lineWidth = 1.1;
+    for (const ex of [-1.8, 1.8]) {
+      ctx.beginPath();
+      ctx.moveTo(ex - 1.1, -10); ctx.lineTo(ex + 1.1, -7.8);
+      ctx.moveTo(ex + 1.1, -10); ctx.lineTo(ex - 1.1, -7.8);
+      ctx.stroke();
+    }
+  } else if (o.eyes === 'leader' || o.eyes === 'frenzy') {
+    // chain leader: snake-style eyes, white sclera + facing pupils
+    const px = -fy, py = fx;
+    for (const s of [-1, 1]) {
+      const ex = fx * 1.4 + px * s * 1.8, ey = -9.3 + fy * 1.4 + py * s * 1.8;
+      ctx.fillStyle = o.eyes === 'frenzy' ? '#ffe1ea' : '#f2fbee';
+      ctx.beginPath(); ctx.arc(ex, ey, 1.1, 0, 7); ctx.fill();
+      ctx.fillStyle = o.eyes === 'frenzy' ? '#e5484d' : '#20342a';
+      ctx.beginPath(); ctx.arc(ex + fx * .5, ey + fy * .5, .55, 0, 7); ctx.fill();
+    }
+  } else if (o.eyes === 'scared') {
+    // wide-eyed terror
+    const px = -fy, py = fx;
+    for (const s of [-1, 1]) {
+      const ex = fx * 1.3 + px * s * 1.8, ey = -9.3 + fy * 1.3 + py * s * 1.8;
+      ctx.fillStyle = '#f4f8f2';
+      ctx.beginPath(); ctx.arc(ex, ey, 1.15, 0, 7); ctx.fill();
+      ctx.fillStyle = '#20342a';
+      ctx.beginPath(); ctx.arc(ex + fx * .4, ey + fy * .4, .5, 0, 7); ctx.fill();
+    }
+    ctx.fillStyle = '#20342a';
+    ctx.beginPath(); ctx.arc(fx * .8, -5.9 + fy * .5, 1.1, 0, 7); ctx.fill();
+  } else {
+    ctx.fillStyle = '#22301f';
+    ctx.beginPath(); ctx.arc(-1.7 + fx * 1.2, -9.3 + fy * 1.2, .8, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(1.7 + fx * 1.2, -9.3 + fy * 1.2, .8, 0, 7); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawPickup(t) {
+  if (!pickup) return;
+  const remaining = pickup.expiresAt - t;
+  const urgent = remaining < 2500;
+  const cx = (pickup.x + .5) * CELL, cy = (pickup.y + .5) * CELL;
+  const alpha = urgent ? .45 + .45 * Math.abs(Math.sin(t / 110)) : 1;
+
+  if (role === 'zombie') {
+    // BRAIN
+    const r = CELL * .32 * (1 + .07 * Math.sin(t / 240));
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.shadowColor = 'rgba(255,158,199,.6)';
+    ctx.shadowBlur = 16;
+    const g = ctx.createRadialGradient(cx - r*.3, cy - r*.35, r*.1, cx, cy, r);
+    g.addColorStop(0, '#ffd3e4'); g.addColorStop(.6, '#f27ba8'); g.addColorStop(1, '#d9548c');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = 'rgba(160,40,90,.55)';
+    ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r*.7);
+    ctx.quadraticCurveTo(cx + r*.3, cy - r*.25, cx, cy + r*.05);
+    ctx.quadraticCurveTo(cx - r*.35, cy + r*.35, cx + r*.15, cy + r*.7);
+    ctx.moveTo(cx - r*.45, cy);
+    ctx.quadraticCurveTo(cx - r*.2, cy + r*.3, cx + r*.05, cy + r*.45);
+    ctx.stroke();
+    ctx.restore();
+  } else {
+    // MEDKIT
+    const s = CELL * .30 * (1 + .06 * Math.sin(t / 240));
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.shadowColor = 'rgba(163,241,96,.5)';
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = '#dde6df';
+    ctx.beginPath(); ctx.roundRect(cx - s, cy - s * .78, s * 2, s * 1.56, 3.5); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#3fae5a';
+    ctx.fillRect(cx - 1.7, cy - s * .55, 3.4, s * 1.1);
+    ctx.fillRect(cx - s * .55, cy - 1.7, s * 1.1, 3.4);
+    ctx.restore();
+  }
+}
+
+function drawAlly(a, t) {
+  const mv = clamp01(1 - (a.nextAt - t) / Math.max(1, a.stepDur));
+  const ix = lerp(a.px, a.x, mv), iy = lerp(a.py, a.y, mv);
+  drawHumanChar((ix + .5) * CELL, (iy + .5) * CELL, t, a, {
+    fx: a.fx, fy: a.fy,
+    eyes: a.mode === 'panic' ? 'scared' : 'normal',
+  });
+}
+
+function drawShots(t) { // hunter tracers + muzzle flash
+  shots = shots.filter(sh => t - sh.bornAt < 170);
+  for (const sh of shots) {
+    const k = (t - sh.bornAt) / 170;
+    ctx.globalAlpha = 1 - k;
+    ctx.strokeStyle = '#ffe9a3';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(sh.x1, sh.y1); ctx.lineTo(sh.x2, sh.y2); ctx.stroke();
+    ctx.fillStyle = '#ffd166';
+    ctx.beginPath(); ctx.arc(sh.x1, sh.y1, 3.6 * (1 - k) + 1, 0, 7); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawFoe(f, t) {
+  const eating = !!(f.eat && t < f.eat.until);
+  const mv = clamp01(1 - (f.nextAt - t) / Math.max(1, f.stepDur));
+  const ix = lerp(f.px, f.x, mv), iy = lerp(f.py, f.y, mv);
+  const cx = (ix + .5) * CELL, cy = (iy + .5) * CELL;
+  const stunned = t < f.stunUntil && !eating;
+  const frenzy = t < frenzyUntil;
+  const panicking = frenzy || f.mode === 'panic';
+  if (role === 'human') {
+    if (eating) {
+      // the victim — held down, fading, shrinking, gone
+      const p = clamp01(1 - (f.eat.until - t) / EAT_MS);
+      drawHumanChar((f.eat.x + .5) * CELL, (f.eat.y + .5) * CELL, t, f.eat.char, {
+        fx: f.eat.fx, fy: f.eat.fy,
+        stunned: true, fall: 1.5,
+        scale: Math.max(.45, 1 - .5 * p),
+        alpha: Math.max(0, .95 - .8 * p),
+      });
+    }
+    const fed = Math.min(f.meals || 0, MEAL_CAP);
+    drawZombieChar(cx, cy, t, f, {
+      fx: f.fx, fy: f.fy,
+      fleeing: panicking && !eating,
+      chasing: f.mode === 'chase' && !panicking && !stunned && !eating,
+      stunned,
+      eating,
+      fall: stunned ? clamp01((t - (f.stunUntil - STUN_MS)) / 220) * 1.45 : 0,
+      scale: Math.min(MEAL_SCALE_CAP, 1 + MEAL_SCALE * fed),
+    });
+  } else {
+    drawHumanChar(cx, cy, t, f, {
+      fx: f.fx, fy: f.fy,
+      panic: panicking,
+      eyes: panicking ? 'scared' : 'normal',
+      stunned,
+      fall: stunned ? clamp01((t - (f.stunUntil - STUN_MS)) / 220) * 1.45 : 0,
+    });
+  }
+}
+
+function drawSnake(t) {
+  // every joint glides between its previous and current cell → smooth chain
+  const pts = snake.map((s, i) => {
+    const p = prevSnake[Math.min(i, prevSnake.length - 1)] || s;
+    return { x: (lerp(p.x, s.x, interp) + .5) * CELL,
+             y: (lerp(p.y, s.y, interp) + .5) * CELL };
+  });
+  const n = pts.length;
+  const frenzy = t < frenzyUntil;
+
+  // chain base — a soft rope under the characters so the line reads as a chain
+  if (n > 1) {
+    ctx.strokeStyle = role === 'human' ? 'rgba(163,241,96,.14)' : 'rgba(143,174,122,.16)';
+    ctx.lineWidth = 4.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < n; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+  }
+
+  // characters, tail → head so the leader overlays the line
+  for (let i = n - 1; i >= 0; i--) {
+    const p = pts[i];
+    let fx = dir.x, fy = dir.y;
+    if (n > 1) {
+      const q = pts[i === 0 ? 1 : i - 1];
+      const vx = (i === 0 ? p.x - q.x : q.x - p.x);
+      const vy = (i === 0 ? p.y - q.y : q.y - p.y);
+      const m = Math.hypot(vx, vy) || 1;
+      fx = vx / m; fy = vy / m;
+    }
+    const isHead = i === 0;
+    const c = roster[i] || makeChar(role);
+    const o = {
+      fx, fy,
+      eyes: isHead ? (frenzy ? 'frenzy' : (role === 'human' ? 'leader' : 'red')) : 'normal',
+      scale: isHead ? 1.16 : 1,
+    };
+    if (role === 'human') drawHumanChar(p.x, p.y, t, c, o);
+    else drawZombieChar(p.x, p.y, t, c, o);
+  }
+
+  // leader marker — soft ring around the head character
+  const h = pts[0];
+  ctx.strokeStyle = role === 'human' ? 'rgba(163,241,96,.35)' : 'rgba(143,174,122,.4)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.arc(h.x, h.y, 12, 0, 7); ctx.stroke();
+  // blood-ring after a fresh kill
+  if (t < headFlashUntil) {
+    const fp = 1 - (headFlashUntil - t) / 260;
+    ctx.strokeStyle = `rgba(229,72,77,${(.8 * (1 - fp)).toFixed(3)})`;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.arc(h.x, h.y, CELL * (.46 + fp * .5), 0, 7); ctx.stroke();
+  }
+}
+
+function drawParticles(t) {
+  particles = particles.filter(p => t - p.bornAt < p.life);
+  for (const p of particles) {
+    const k = (t - p.bornAt) / p.life, d = (t - p.bornAt) / 1000;
+    ctx.globalAlpha = 1 - k;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x + p.vx * d, p.y + p.vy * d, Math.max(.4, p.r * (1 - .55 * k)), 0, 7);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function draw(t) {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, SIZE, SIZE);
+
+  // board + faint checkerboard
+  ctx.fillStyle = '#0d1413';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  ctx.fillStyle = 'rgba(255,255,255,.013)';
+  for (let y = 0; y < ROWS; y++)
+    for (let x = 0; x < COLS; x++)
+      if ((x + y) & 1) ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+
+  drawFog(t);
+  drawStains(t);
+  drawPickup(t);
+
+  for (const a of allies) drawAlly(a, t);
+
+  const order = foes.slice().sort((a, b) => a.y - b.y);
+  for (const f of order) drawFoe(f, t);
+
+  drawSnake(t);
+  drawShots(t);
+  drawParticles(t);
+
+  // vignette
+  ctx.fillStyle = getVignette();
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // frenzy tint (lime rush for humans, pink for zombie frenzy)
+  if (t < frenzyUntil) {
+    const rgb = role === 'human' ? '163,241,160' : '255,130,170';
+    ctx.fillStyle = `rgba(${rgb},${(.03 + .012 * Math.sin(t / 140)).toFixed(3)})`;
+    ctx.fillRect(0, 0, SIZE, SIZE);
+  }
+  // hurt flash
+  if (hurtAt) {
+    const a = .28 * (1 - (t - hurtAt) / 380);
+    if (a > 0) { ctx.fillStyle = `rgba(229,72,77,${a.toFixed(3)})`; ctx.fillRect(0, 0, SIZE, SIZE); }
+  }
+  // death flash
+  if (deathAt) {
+    const a = .32 * (1 - (t - deathAt) / 500);
+    if (a > 0) { ctx.fillStyle = `rgba(229,72,77,${a.toFixed(3)})`; ctx.fillRect(0, 0, SIZE, SIZE); }
+  }
+}
+
+/* ═══════════════ main loop ═══════════════ */
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(now - last, 100); // clamp hiccups / hidden-tab gaps
+  last = now;
+
+  if (state === 'playing') {
+    gt += dt;
+    acc += dt;
+    let guard = 0;
+    while (acc >= stepMs && guard++ < 10) {
+      step();
+      acc -= stepMs;
+      if (state !== 'playing') { acc = 0; break; } // died mid-burst
+    }
+    interp = Math.min(1, acc / stepMs);
+    if (state === 'playing') updateFoes();
+    if (state === 'playing') updateAllies();
+  }
+
+  draw(gt);
+  syncFrenzyBar();
+  requestAnimationFrame(frame);
+}
+
+/* ═══════════════ boot ═══════════════ */
+
+applyRoleSkin();
+reset();
+updateRoleCards();
+setRoleFocus('human');
+show(ovRole);
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>

@@ -261,16 +261,44 @@
     .final .big{ font-size:46px; }
   }
 
+  /* phones / touch screens: fill the viewport (same treatment as index.html) */
+  @media (pointer:coarse){
+    body{
+      padding:18px 10px;
+      padding-top:max(18px, env(safe-area-inset-top));
+      padding-bottom:max(18px, env(safe-area-inset-bottom));
+      padding-left:max(10px, env(safe-area-inset-left));
+      padding-right:max(10px, env(safe-area-inset-right));
+    }
+    .stage{ gap:16px; }
+    .frame{
+      width:min(520px, calc(100vw - max(10px, env(safe-area-inset-left)) - max(10px, env(safe-area-inset-right))), calc(100vh - 240px));
+      width:min(520px, calc(100vw - max(10px, env(safe-area-inset-left)) - max(10px, env(safe-area-inset-right))), calc(100dvh - 240px));
+    }
+    /* keyboard hints are noise on touch — keep the swipe line only */
+    .hints > :not(.touch-only){ display:none; }
+    .hints .or{ display:none; }
+  }
+
   /* short screens (phones in landscape): shrink the chrome, feed the board */
   @media (max-height:540px){
-    body{ padding-top:12px; padding-bottom:12px; }
-    .stage{ gap:10px; }
+    body{
+      padding-top:max(10px, env(safe-area-inset-top));
+      padding-bottom:max(10px, env(safe-area-inset-bottom));
+    }
+    .stage{ gap:8px; }
     .kicker{ display:none; }
     .title{ font-size:15px; letter-spacing:.26em; text-indent:.26em; }
     .hints{ display:none; }
+    .hud{ padding:6px 12px; }
+    .icon-btn{ width:36px; height:36px; border-radius:9px; }
+    .overlay{ gap:8px; padding:12px; }
+    .ov-title{ font-size:20px; }
+    .final .big{ font-size:30px; }
+    .btn{ padding:12px 24px; font-size:12px; }
     .frame{
-      width:min(520px, 92vw, calc(100vh - 140px));
-      width:min(520px, 92vw, calc(100dvh - 140px));
+      width:min(520px, 92vw, calc(100vh - 108px));
+      width:min(520px, 92vw, calc(100dvh - 108px));
     }
   }
 </style>

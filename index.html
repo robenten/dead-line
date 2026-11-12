@@ -24,6 +24,10 @@
       bandana) cut down zombies that catch the chain near them ·
       HUNTERS (green cap) snipe the nearest zombie · MEDICS (white
       helmet) slowly regrow lost recruits, up to your peak length.
+    · The horde has breeds (human role): RUNNERS are lanky and fast
+      but frail · BRUTES are huge, soak three hits, bite deep and
+      barely feel the rush · LUNGERS (orange mark) crouch, flash
+      red, then dash several cells at your head — sidestep.
     · Zombies eat caught characters (~1.5s) AND unrecruited
       wanderers. A catch on the HEAD, or dropping below 3 segments,
       ends the run.
@@ -303,7 +307,9 @@
   .d-hum{ background:#e8c39e; box-shadow:0 0 8px rgba(232,195,158,.5); }
   .d-brain{ background:var(--brain); box-shadow:0 0 8px rgba(255,158,199,.6); }
   .d-med{ background:#d8e6df; box-shadow:0 0 8px rgba(163,241,96,.6); }
-.d-bite{ background:var(--danger); box-shadow:0 0 8px rgba(229,72,77,.6); }
+  .d-bite{ background:var(--danger); box-shadow:0 0 8px rgba(229,72,77,.6); }
+  .d-run{ background:#ffd166; box-shadow:0 0 8px rgba(255,209,102,.6); }
+  .d-lunge{ background:#ff8c42; box-shadow:0 0 8px rgba(255,140,66,.6); }
   .d-fight{ background:#d8443f; box-shadow:0 0 8px rgba(216,68,63,.6); }
   .d-hunt{ background:#5ac8b0; box-shadow:0 0 8px rgba(90,200,176,.6); }
 
@@ -460,9 +466,11 @@
      (change-role stays available on the game-over card) */
   @media (pointer:coarse) and (max-width:480px){
     #btn-role-1{ display:none; }
-    .ov-text{ font-size:13.5px; }
-    .overlay{ gap:8px; padding:14px; }
-    .legend li{ font-size:12px; line-height:1.3; }
+    .ov-text{ display:none; } /* flavor line — traded for safety margin on the smallest boards */
+    .overlay{ gap:7px; padding:12px; }
+    .legend li{ font-size:11.5px; line-height:1.25; }
+    #ov-start > svg{ width:36px; height:36px; }
+    .btn{ padding:14px 28px; }
   }
 
   @media (max-height:740px){
@@ -741,6 +749,30 @@ const MEAL_SPEEDUP = .97;  // fed zombies step this much faster, per meal
 const MEAL_CAP = 3;        // meals beyond this stop boosting speed/size
 const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
+const BRUTE_MEAL_CAP = 1.026; // keeps the fed brute ≈1.6× total (1.2 enlarge × 1.3 breed × this)
+
+/* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
+const Z_BREED = {
+  walker: { hp: 1, bite: 2, floor: 170 },  // the shambler
+  runner: { hp: 1, bite: 2, floor: 115 },  // fast but frail
+  brute:  { hp: 3, bite: 3, floor: 230 },  // slow, soaks hits, bites deep, shrugs off the rush
+  lunger: { hp: 1, bite: 2, floor: 175 },  // telegraphs, then dashes at the leader
+};
+const LUNGER_RANGE = 7;      // cells — will wind up a dash inside this radius
+const LUNGER_WINDUP = 620;   // ms of telegraph (direction locks at wind-up: dodgeable)
+const LUNGER_DASH_MS = 70;   // ms per cell while dashing
+const LUNGER_DASH_LEN = 4;   // cells per dash
+const LUNGER_CD = 3400;      // ms between dashes (plus jitter)
+const BRUTE_CLOTH = ['#5a4030', '#6b4a35', '#4a3630', '#5c3d3d']; // earthy rags
+
+function pickZombieType(w) { // spawn mix ramps the breeds in wave by wave
+  const r = Math.random();
+  if (w >= 7) return r < .40 ? 'walker' : r < .65 ? 'runner' : r < .85 ? 'lunger' : 'brute';
+  if (w >= 5) return r < .45 ? 'walker' : r < .70 ? 'runner' : r < .85 ? 'lunger' : 'brute';
+  if (w >= 3) return r < .60 ? 'walker' : r < .85 ? 'runner' : 'lunger';
+  if (w >= 2) return r < .70 ? 'walker' : 'runner';
+  return r < .80 ? 'walker' : 'runner';
+}
 const ALLY_CAP = 6;           // max wandering recruits on the board (human role)
 const ALLY_SPAWN_MS = 3500;   // pacing between recruit spawns
 const ALLY_FLEE_R = 4;        // wanderers bolt from zombies this close
@@ -861,9 +893,27 @@ const SND = (() => {
     note('triangle', 930, 1240, .07, .09, .05);
   } catch {} }
 
-  function kill(v = 1){ if (!live()) return; try {              // headbutt / kill
-    note('sine', 170, 52, 0, .16, .14 * v);
-    hiss(0, .13, .09 * v, 1400, 150);
+  function kill(v = 1, breed){ if (!live()) return; try {              // headbutt / kill
+    if (breed === 'runner') {       // lighter, higher — it goes down easy
+      note('sine', 250, 95, 0, .11, .12 * v);
+      hiss(0, .08, .05 * v, 1900, 300);
+    } else if (breed === 'brute') { // a deeper, heavier collapse
+      note('sine', 105, 34, 0, .22, .16 * v);
+      hiss(0, .18, .1 * v, 800, 90);
+    } else {
+      note('sine', 170, 52, 0, .16, .14 * v);
+      hiss(0, .13, .09 * v, 1400, 150);
+    }
+  } catch {} }
+
+  function hit(){ if (!live()) return; try {                    // brute soaks a hit
+    note('triangle', 330, 150, 0, .08, .07);
+    note('sine', 120, 58, 0, .11, .09);
+  } catch {} }
+
+  function lungeWarn(){ if (!live()) return; try {              // lunger wind-up cue
+    note('sine', 640, 980, 0, .09, .045);
+    note('sine', 960, 1440, .05, .08, .035);
   } catch {} }
 
   function hurt(){ if (!live()) return; try {                   // a catch on the chain
@@ -926,7 +976,7 @@ const SND = (() => {
 
   function droneStop(){ if (!drone) return; try { drone.stop(); } catch {} drone = null; }
 
-  return { unlock, setMuted, ui, blip, kill, hurt, wave, frenzy, death, best, droneStart, droneStop };
+  return { unlock, setMuted, ui, blip, kill, hit, hurt, lungeWarn, wave, frenzy, death, best, droneStart, droneStop };
 })();
 
 /* ═══════════════ state ═══════════════ */
@@ -991,7 +1041,9 @@ const HUMAN_LEGEND = `
   <li><i class="dot d-fight"></i><span>Fighters cut down zombies that catch the chain near them</span></li>
   <li><i class="dot d-hunt"></i><span>Hunters snipe the nearest zombie, on a cooldown</span></li>
   <li><i class="dot d-med"></i><span>Medics slowly regrow lost recruits, up to your peak</span></li>
-  <li><i class="dot d-bite"></i><span>Zombies eat whoever they catch — medkits still trigger a rush</span></li>`;
+  <li><i class="dot d-bite"></i><span>Zombies eat whoever they catch — medkits still trigger a rush</span></li>
+  <li><i class="dot d-run"></i><span>Runners are quick; Brutes need three hits and bite deep</span></li>
+  <li><i class="dot d-lunge"></i><span>Lungers flash red, then dash — step out of the way</span></li>`;
 const ZOMBIE_LEGEND = `
   <li><i class="dot d-hum"></i><span>Headbutt humans to convert them into growth</span></li>
   <li><i class="dot d-brain"></i><span>Brains trigger a frenzy — the living scatter</span></li>
@@ -1106,6 +1158,25 @@ function step() {
 function killFoe(f, pts) { // shared by headbutts, fighter saves and hunter shots
   const i = foes.indexOf(f);
   if (i < 0) return;
+  if ((f.hp || 1) > 1) { // brutes soak hits — the third one lands
+    f.hp--;
+    f.hitAt = gt;
+    score += 10; // chip points
+    burst((f.x + .5) * CELL, (f.y + .5) * CELL, ['#c6d6c9', GORE[1]], 6);
+    // bounce the brute off whoever hit it
+    let kx = Math.sign(f.x - snake[0].x), ky = Math.sign(f.y - snake[0].y);
+    if (!kx && !ky) { kx = dir.x; ky = dir.y; } // headbutt overlap — ride the player's travel axis
+    const bx = f.x + kx, by = f.y + ky;
+    if (bx >= 0 && by >= 0 && bx < COLS && by < ROWS && !occupied(bx, by)) {
+      f.x = bx; f.y = by; f.px = bx; f.py = by;
+    }
+    f.stunUntil = Math.max(f.stunUntil, gt + 500);
+    f.windup = null; f.lunge = null;
+    shake('sm');
+    SND.hit();
+    updateHud();
+    return;
+  }
   foes.splice(i, 1);
   kills++;
   score += pts;
@@ -1114,7 +1185,7 @@ function killFoe(f, pts) { // shared by headbutts, fighter saves and hunter shot
   stains.push({ x: f.x, y: f.y, seed: (Math.random() * 1e9) | 0, bornAt: gt });
   if (stains.length > 30) stains.shift();
   shake('sm');
-  SND.kill();
+  SND.kill(1, f.type);
   updateHud();
 }
 
@@ -1166,7 +1237,7 @@ function bite(f, idx) {
   }
   const caughtChar = roster[idx] || makeChar(role);
   SND.hurt();
-  const lost = Math.min(BITE_LOSS, snake.length - 1);
+  const lost = Math.min(f.type === 'brute' ? Z_BREED.brute.bite : BITE_LOSS, snake.length - 1);
   for (let k = 0; k < lost; k++) {
     const t = snake[snake.length - 1];
     burst((t.x + .5) * CELL, (t.y + .5) * CELL, ROT, 8);
@@ -1207,7 +1278,7 @@ function bite(f, idx) {
   }
 
   hurtAt = gt + 350;
-  shake('md');
+  shake(f.type === 'brute' ? 'lg' : 'md'); // a brute bite rocks the whole board
   if (snake.length < SNAKE_MIN) { die('picked'); return; }
   updateHud();
 }
@@ -1270,13 +1341,22 @@ function spawnFoe() {
   if (!c) return;
   // zombie-role prey stay plain humans — classes are a human-role system
   const ch = makeChar(foeFaction(), role === 'zombie' ? 'survivor' : undefined);
+  const breed = foeFaction() === 'zombie' ? pickZombieType(wave) : null;
+  if (breed === 'brute') ch.cloth = pick(BRUTE_CLOTH); // earthy rags — reads big & mean
+  const z = breed && Z_BREED[breed];
   foes.push({
     x: c.x, y: c.y, px: c.x, py: c.y,
     fx: 0, fy: 1, dir: pick(CARD), mode: 'wander',
     skin: ch.skin, hair: ch.hair, cloth: ch.cloth, arms: ch.arms, phase: ch.phase,
-    moveMs: Math.max(190, 310 - wave * 10 + Math.random() * 80),
+    type: breed, hp: z ? z.hp : 1, hitAt: 0,
+    speedFloor: z ? z.floor : 170,
+    moveMs: breed === 'runner' ? Math.max(Z_BREED.runner.floor, 205 - wave * 8 + Math.random() * 50)
+          : breed === 'brute'  ? Math.max(Z_BREED.brute.floor, 380 - wave * 8 + Math.random() * 60)
+          : breed === 'lunger' ? Math.max(Z_BREED.lunger.floor, 300 - wave * 10 + Math.random() * 80)
+          :                         Math.max(190, 310 - wave * 10 + Math.random() * 80),
     nextAt: gt + 400 + Math.random() * 800,
     lastMoveAt: gt, stepDur: 400, stunUntil: 0,
+    nextLungeAt: gt + 1600 + Math.random() * 2400, // lungers only
   });
 }
 
@@ -1298,7 +1378,7 @@ function updateFoes() {
     waveNextAt = gt + WAVE_MS;
     showToast('WAVE ' + wave);
     SND.wave();
-    for (const f of foes) f.moveMs = Math.max(170, f.moveMs * .95);
+    for (const f of foes) f.moveMs = Math.max(f.speedFloor || 170, f.moveMs * .95);
     updateHud();
   }
   // pickup lifecycle
@@ -1336,7 +1416,48 @@ function stepFoe(f) {
   const frenzy = gt < frenzyUntil;
   let d, mode = 'wander';
 
+  // an adrenaline rush interrupts lungers mid-flight
+  if (frenzy && (f.windup || f.lunge)) { f.windup = null; f.lunge = null; f.nextLungeAt = gt + 2000; }
+
   if (role === 'human') {
+    // ── lunger breed: telegraph, then a locked-direction dash ──
+    if (f.type === 'lunger') {
+      if (f.windup) { // holding the crouch — direction already locked
+        if (gt < f.windup.until) { f.nextAt = f.windup.until; f.stepDur = f.windup.until - gt; return; }
+        f.lunge = { dx: f.windup.dx, dy: f.windup.dy, left: LUNGER_DASH_LEN };
+        f.windup = null;
+      }
+      if (f.lunge) { // dashing — one cell per LUNGER_DASH_MS, ignores avoidance
+        const nx = f.x + f.lunge.dx, ny = f.y + f.lunge.dy;
+        if (f.lunge.left <= 0 || (f.eat && gt < f.eat.until) || nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) {
+          f.lunge = null;
+          f.nextLungeAt = gt + LUNGER_CD + Math.random() * 1800;
+        } else {
+          f.px = f.x; f.py = f.y;
+          f.x = nx; f.y = ny;
+          f.fx = f.lunge.dx; f.fy = f.lunge.dy;
+          f.lunge.left--;
+          f.nextAt = gt + LUNGER_DASH_MS; f.stepDur = LUNGER_DASH_MS;
+          f.mode = 'chase';
+          const ai = allies.findIndex(a => a.x === nx && a.y === ny);
+          if (ai >= 0) { eatWanderer(f, ai); f.lunge = null; f.nextLungeAt = gt + LUNGER_CD; return; }
+          const idx = snake.findIndex(s => s.x === nx && s.y === ny);
+          if (idx === 0) { die('head'); return; }
+          if (idx > 0) { bite(f, idx); f.lunge = null; f.nextLungeAt = gt + LUNGER_CD; return; }
+          return; // clean dash step — no wander resolution mid-flight
+        }
+      } else if (!frenzy && gt >= (f.nextLungeAt || 0) &&
+                 Math.max(Math.abs(head.x - f.x), Math.abs(head.y - f.y)) <= LUNGER_RANGE) {
+        // wind up: crouch + flash, direction locked NOW (so it can be dodged)
+        let sdx = Math.sign(head.x - f.x), sdy = Math.sign(head.y - f.y);
+        if (!sdx && !sdy) sdx = 1; // same cell — any axis beats a frozen diagonal
+        f.windup = { until: gt + LUNGER_WINDUP, dx: sdx, dy: sdy };
+        f.mode = 'windup';
+        f.nextAt = f.windup.until; f.stepDur = LUNGER_WINDUP;
+        SND.lungeWarn();
+        return;
+      }
+    }
     // zombies hunt the snake
     if (frenzy) {
       d = awayFrom(head, f); mode = 'panic';
@@ -1380,7 +1501,9 @@ function stepFoe(f) {
   f.px = f.x; f.py = f.y;
   f.x = nx; f.y = ny;
   f.fx = nx - f.px; f.fy = ny - f.py;
-  const speedMul = mode === 'chase' ? .8 : mode === 'panic' ? (frenzy ? 1.7 : .85) : 1;
+  const speedMul = mode === 'chase' ? .8
+    : mode === 'panic' ? (frenzy ? (f.type === 'brute' ? 1.15 : 1.7) : .85) // brutes shrug off the rush
+    : 1;
   const fed = Math.min(f.meals || 0, MEAL_CAP); // well-fed zombies hunt faster (capped)
   f.nextAt = gt + f.moveMs * Math.pow(MEAL_SPEEDUP, fed) * speedMul;
   f.stepDur = f.nextAt - gt;
@@ -1728,6 +1851,15 @@ function drawZombieChar(cx, cy, t, c, o) {
   ctx.save();
   ctx.translate(cx + fx * (chasing ? 1.4 : 0), cy + bob);
   ctx.translate(0, CHAR_PIVOT_Y); ctx.scale(CHAR_SCALE, CHAR_SCALE); ctx.translate(0, -CHAR_PIVOT_Y); // enlarge
+  // ── breed silhouettes (readable at a glance) ──
+  if (c.type === 'runner') ctx.scale(.84, 1.08);        // lean & lanky
+  else if (c.type === 'brute') ctx.scale(1.30, 1.16);   // hulking
+  if (c.windup && t < c.windup.until) {                  // lunger: crouch + pulsing alarm
+    ctx.scale(1.12, .8);
+    ctx.strokeStyle = `rgba(229,72,77,${(.35 + .45 * Math.abs(Math.sin(t / 85))).toFixed(2)})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(0, -2, 13, 0, 7); ctx.stroke();
+  } else if (c.lunge) ctx.scale(1.18, .88);             // stretched mid-dash
   ctx.fillStyle = 'rgba(0,0,0,.30)';
   ctx.beginPath(); ctx.ellipse(0, 5, 7.5, 3.4, 0, 0, 7); ctx.fill();
   if (fleeing && !stunned) {
@@ -1745,6 +1877,10 @@ function drawZombieChar(cx, cy, t, c, o) {
   // torso (torn shirt)
   ctx.fillStyle = c.cloth;
   ctx.beginPath(); ctx.roundRect(-5.5, -5, 11, 9, 3); ctx.fill();
+  if (c.type === 'lunger') { // orange strike-mark — spot the dasher early
+    ctx.strokeStyle = '#ff8c42'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-2.4, -3.6); ctx.lineTo(2.4, -1.4); ctx.stroke();
+  }
   // arms reaching toward travel direction (some lost one)
   ctx.strokeStyle = c.skin; ctx.lineWidth = 2.8;
   const px = -fy, py = fx;
@@ -1784,6 +1920,13 @@ function drawZombieChar(cx, cy, t, c, o) {
     ctx.beginPath(); ctx.arc(1.8, -9.3, .9, 0, 7); ctx.fill();
     ctx.strokeStyle = '#1c261d'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(-1.4, -6.2); ctx.lineTo(1.4, -6.6); ctx.stroke();
+  }
+  // brute soaking a hit — white flash ring
+  if (c.hitAt && t - c.hitAt < 180) {
+    const k = 1 - (t - c.hitAt) / 180;
+    ctx.strokeStyle = `rgba(255,255,255,${(.7 * k).toFixed(2)})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, -2, 11, 0, 7); ctx.stroke();
   }
   ctx.restore();
 }
@@ -1989,7 +2132,7 @@ function drawFoe(f, t) {
       stunned,
       eating,
       fall: stunned ? clamp01((t - (f.stunUntil - STUN_MS)) / 220) * 1.45 : 0,
-      scale: Math.min(MEAL_SCALE_CAP, 1 + MEAL_SCALE * fed),
+      scale: Math.min(f.type === 'brute' ? BRUTE_MEAL_CAP : MEAL_SCALE_CAP, 1 + MEAL_SCALE * fed),
     });
   } else {
     drawHumanChar(cx, cy, t, f, {

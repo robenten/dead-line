@@ -182,6 +182,14 @@
   }
   .toast.pink{ color:var(--brain); text-shadow:0 0 24px rgba(255,158,199,.6), 0 2px 10px rgba(0,0,0,.7); }
   .toast.go{ animation:toast 1.9s ease forwards; }
+
+  /* build badge — ground truth for "am I on the latest?" (page is cached ~10 min).
+     absolute + pointer-events:none, so it never affects layout, hits, or the phone fits */
+  .build-tag{
+    position:absolute; right:7px; bottom:4px;
+    font:600 9px/1 var(--mono); letter-spacing:.05em;
+    color:rgba(163,241,96,.4); pointer-events:none; user-select:none;
+  }
   @keyframes toast{
     0%{ opacity:0; transform:translate(-50%,-42%) scale(.92); }
     15%{ opacity:1; transform:translate(-50%,-50%) scale(1); }
@@ -561,6 +569,7 @@
 
     <div class="board">
       <canvas id="board" width="576" height="576" role="img" aria-label="Dead Line board"></canvas>
+      <span class="build-tag" aria-hidden="true"></span>
 
       <div class="toast" id="toast">WAVE 2</div>
       <div class="frenzy" id="frenzy"><span id="frenzy-label">Frenzy</span><div class="frenzy-track"><i class="frenzy-fill" id="frenzy-fill"></i></div></div>
@@ -605,6 +614,7 @@
         </div>
         <p class="ov-hint key-only">press <kbd>1</kbd> or <kbd>2</kbd> · arrows + <kbd>Enter</kbd></p>
         <p class="ov-hint touch-only">tap your side</p>
+        <span class="build-tag" id="build-role"></span>
       </div>
 
       <!-- ready screen (after picking a role) -->
@@ -752,6 +762,8 @@ const MEAL_CAP = 3;        // meals beyond this stop boosting speed/size
 const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
+
+const BUILD = 'v2026.11.12'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 const Z_BREED = {
@@ -2315,6 +2327,7 @@ setRoleFocus('human');
 show(ovRole);
 syncMuteBtn();
 SND.setMuted(muted);   // applies to the context once a gesture unlocks it
+document.querySelectorAll('.build-tag').forEach(el => el.textContent = BUILD);
 requestAnimationFrame(frame);
 
 // unlock audio on the first gesture — capture phase so the context exists

@@ -698,13 +698,20 @@ const DPR  = Math.min(window.devicePixelRatio || 1, 2);
 canvas.width  = SIZE * DPR;   // crisp on retina
 canvas.height = SIZE * DPR;
 
+// characters are drawn ~20% larger than the base grid so they read clearly on
+// phone screens (render-only — the 24×24 collision grid is untouched). The
+// pivot sits on the body's visual center so the growth is balanced.
+const CHAR_SCALE = 1.2;
+const CHAR_PIVOT_Y = -2.5;   // head −8.5 … feet +8.6 → visual center ≈ −2.5
+
 // cached zombie eye-glow sprite — per-frame canvas shadowBlur is slow on phone
-// GPUs, so the red eye + its halo are baked once (at DPR) and blitted per eye.
+// GPUs, so the red eye + its halo are baked once and blitted per eye. Backing
+// is DPR × CHAR_SCALE so the enlarged characters blit it at 1:1 (stays crisp).
 const EYE_GLOW = (() => {
   const S = 12, c = document.createElement('canvas');
-  c.width = c.height = Math.ceil(S * DPR);
+  c.width = c.height = Math.ceil(S * DPR * CHAR_SCALE);
   const g = c.getContext('2d');
-  g.scale(DPR, DPR);
+  g.scale(DPR * CHAR_SCALE, DPR * CHAR_SCALE);
   const glow = g.createRadialGradient(S/2, S/2, 0, S/2, S/2, S/2);
   glow.addColorStop(0,   'rgba(255,95,86,.8)');
   glow.addColorStop(.18, 'rgba(255,95,86,.55)');
@@ -1720,6 +1727,7 @@ function drawZombieChar(cx, cy, t, c, o) {
   const wob = Math.sin(t / 340 + c.phase) * .07;
   ctx.save();
   ctx.translate(cx + fx * (chasing ? 1.4 : 0), cy + bob);
+  ctx.translate(0, CHAR_PIVOT_Y); ctx.scale(CHAR_SCALE, CHAR_SCALE); ctx.translate(0, -CHAR_PIVOT_Y); // enlarge
   ctx.fillStyle = 'rgba(0,0,0,.30)';
   ctx.beginPath(); ctx.ellipse(0, 5, 7.5, 3.4, 0, 0, 7); ctx.fill();
   if (fleeing && !stunned) {
@@ -1787,6 +1795,7 @@ function drawHumanChar(cx, cy, t, c, o) {
   ctx.save();
   if (o.alpha != null) ctx.globalAlpha = o.alpha;
   ctx.translate(cx + fx * (o.lean || 0), cy + bob);
+  ctx.translate(0, CHAR_PIVOT_Y); ctx.scale(CHAR_SCALE, CHAR_SCALE); ctx.translate(0, -CHAR_PIVOT_Y); // enlarge
   ctx.fillStyle = 'rgba(0,0,0,.28)';
   ctx.beginPath(); ctx.ellipse(0, 5, 6.8, 3.1, 0, 0, 7); ctx.fill();
   if (o.panic && !stunned) {
@@ -1881,17 +1890,17 @@ function drawPickup(t) {
 
   if (role === 'zombie') {
     // BRAIN
-    const r = CELL * .32 * (1 + .07 * Math.sin(t / 240));
+    const r = CELL * .40 * (1 + .07 * Math.sin(t / 240));
     ctx.save();
     ctx.globalAlpha = alpha;
     // soft halo (was canvas shadowBlur — slow on phones); gradient approximates
-    // the old glow: full strength at the brain's edge, fading out over ~16px
-    const halo = ctx.createRadialGradient(cx, cy, r, cx, cy, r + 16);
+    // the old glow: full strength at the brain's edge, fading out over ~18px
+    const halo = ctx.createRadialGradient(cx, cy, r, cx, cy, r + 18);
     halo.addColorStop(0,  'rgba(255,158,199,.30)');
     halo.addColorStop(.5, 'rgba(255,158,199,.11)');
     halo.addColorStop(1,  'rgba(255,158,199,0)');
     ctx.fillStyle = halo;
-    ctx.beginPath(); ctx.arc(cx, cy, r + 16, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, r + 18, 0, 7); ctx.fill();
     const g = ctx.createRadialGradient(cx - r*.3, cy - r*.35, r*.1, cx, cy, r);
     g.addColorStop(0, '#ffd3e4'); g.addColorStop(.6, '#f27ba8'); g.addColorStop(1, '#d9548c');
     ctx.fillStyle = g;
@@ -1911,21 +1920,21 @@ function drawPickup(t) {
     ctx.restore();
   } else {
     // MEDKIT
-    const s = CELL * .30 * (1 + .06 * Math.sin(t / 240));
+    const s = CELL * .37 * (1 + .06 * Math.sin(t / 240));
     ctx.save();
     ctx.globalAlpha = alpha;
     // soft halo (was canvas shadowBlur — slow on phones)
-    const halo = ctx.createRadialGradient(cx, cy, s, cx, cy, s + 14);
+    const halo = ctx.createRadialGradient(cx, cy, s, cx, cy, s + 16);
     halo.addColorStop(0,  'rgba(163,241,96,.25)');
     halo.addColorStop(.5, 'rgba(163,241,96,.09)');
     halo.addColorStop(1,  'rgba(163,241,96,0)');
     ctx.fillStyle = halo;
-    ctx.beginPath(); ctx.arc(cx, cy, s + 14, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, s + 16, 0, 7); ctx.fill();
     ctx.fillStyle = '#dde6df';
-    ctx.beginPath(); ctx.roundRect(cx - s, cy - s * .78, s * 2, s * 1.56, 3.5); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(cx - s, cy - s * .78, s * 2, s * 1.56, 4); ctx.fill();
     ctx.fillStyle = '#3fae5a';
-    ctx.fillRect(cx - 1.7, cy - s * .55, 3.4, s * 1.1);
-    ctx.fillRect(cx - s * .55, cy - 1.7, s * 1.1, 3.4);
+    ctx.fillRect(cx - 2.1, cy - s * .55, 4.2, s * 1.1);
+    ctx.fillRect(cx - s * .55, cy - 2.1, s * 1.1, 4.2);
     ctx.restore();
   }
 }
@@ -2006,7 +2015,7 @@ function drawSnake(t) {
   // chain base — a soft rope under the characters so the line reads as a chain
   if (n > 1) {
     ctx.strokeStyle = role === 'human' ? 'rgba(163,241,96,.14)' : 'rgba(143,174,122,.16)';
-    ctx.lineWidth = 4.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
     for (let i = 1; i < n; i++) ctx.lineTo(pts[i].x, pts[i].y);
     ctx.stroke();
@@ -2038,13 +2047,13 @@ function drawSnake(t) {
   const h = pts[0];
   ctx.strokeStyle = role === 'human' ? 'rgba(163,241,96,.35)' : 'rgba(143,174,122,.4)';
   ctx.lineWidth = 1.4;
-  ctx.beginPath(); ctx.arc(h.x, h.y, 12, 0, 7); ctx.stroke();
+  ctx.beginPath(); ctx.arc(h.x, h.y, 14, 0, 7); ctx.stroke();
   // blood-ring after a fresh kill
   if (t < headFlashUntil) {
     const fp = 1 - (headFlashUntil - t) / 260;
     ctx.strokeStyle = `rgba(229,72,77,${(.8 * (1 - fp)).toFixed(3)})`;
     ctx.lineWidth = 2.2;
-    ctx.beginPath(); ctx.arc(h.x, h.y, CELL * (.46 + fp * .5), 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.arc(h.x, h.y, CELL * (.55 + fp * .5), 0, 7); ctx.stroke();
   }
 }
 

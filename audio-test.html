@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DEAD LINE — audio test</title>
+<style>
+  body { font: 16px -apple-system, sans-serif; background: #101510; color: #c6d6c9;
+         max-width: 480px; margin: 0 auto; padding: 16px; }
+  button { display: block; width: 100%; margin: 14px 0; padding: 20px; font-size: 20px;
+           border: 0; border-radius: 12px; background: #a3f160; color: #101510; font-weight: 700; }
+  button.alt { background: #35502e; color: #c6d6c9; }
+  #log { background: #05080a; border-radius: 8px; padding: 12px; font: 13px ui-monospace, monospace;
+         white-space: pre-wrap; word-break: break-all; line-height: 1.5; }
+  .ok { color: #a3f160; } .bad { color: #ff5f56; } .dim { color: #6b7d6e; }
+  h1 { font-size: 18px; } h2 { font-size: 14px; color: #6b7d6e; margin: 18px 0 0; }
+</style>
+</head>
+<body>
+<h1>🔊 Audio diagnostic <span class="dim">v1</span></h1>
+<p>Tap the big button. You should hear a loud beep and every step should turn green. Then tell me what the last line says.</p>
+<button id="beep">TAP TO PLAY TEST BEEP</button>
+<button id="alt" class="alt">try &lt;audio&gt; tag instead</button>
+<h2>What your phone reports</h2>
+<div id="log">waiting for a tap…</div>
+<script>
+(() => {
+const log = document.getElementById('log');
+const lines = [];
+function say(msg, cls) {
+  lines.push((cls === 'ok' ? '✓ ' : cls === 'bad' ? '✗ ' : '· ') + msg);
+  log.innerHTML = lines.map(l =>
+    '<div class="' + (l[0] === '✓' ? 'ok' : l[0] === '✗' ? 'bad' : 'dim') + '">' + l.slice(2) + '</div>').join('');
+}
+say('iOS says: ' + (navigator.userAgent.match(/OS (\d+_\d+)/)?.[1] || 'not iOS?'));
+say('AudioContext: ' + (window.AudioContext ? 'supported' : 'MISSING'));
+say('webkitAudioContext: ' + (window.webkitAudioContext ? 'available' : 'n/a'));
+try { if ('audioSession' in navigator) { navigator.audioSession.type = 'playback'; say('audioSession.type = playback, now: ' + navigator.audioSession.type, 'ok'); } else say('audioSession API: not available'); }
+catch (e) { say('audioSession threw: ' + e.message, 'bad'); }
+
+let ctx = null, armed = false, attempts = 0;
+const EVENTS = ['pointerup', 'touchend', 'click', 'keydown'];
+let seen = {};
+
+function unlock(ev) {
+  seen[ev.type] = (seen[ev.type] || 0) + 1;
+  attempts++;
+  try {
+    if (!ctx) { ctx = new (window.AudioContext || window.webkitAudioContext)(); say('context created (attempt ' + attempts + ')', 'ok'); }
+    say('event: ' + ev.type + ' → ctx.state=' + ctx.state + ' (t=' + performance.now().toFixed(0) + ')');
+    const p = ctx.resume();
+    say('resume() called');
+    const t0 = performance.now();
+    p.then(() => {
+      say('resume promise resolved in ' + (performance.now() - t0).toFixed(0) + 'ms, state=' + ctx.state,
+          ctx.state === 'running' ? 'ok' : 'bad');
+      if (ctx.state === 'running' && !armed) { armed = true; playBeep(); }
+    }).catch(err => say('resume REJECTED: ' + err.message, 'bad'));
+    // silent 1-sample pulse in the same gesture
+    const s = ctx.createBufferSource();
+    s.buffer = ctx.createBuffer(1, 1, 22050);
+    s.connect(ctx.destination);
+    s.start(0);
+    if (ctx.state === 'running' && !armed) { armed = true; playBeep(); }
+  } catch (e) { say('UNLOCK THREW: ' + e.message, 'bad'); }
+}
+EVENTS.forEach(t => window.addEventListener(t, unlock, { capture: true, passive: true }));
+if (ctx) ctx.onstatechange = () => say('statechange → ' + (ctx && ctx.state));
+
+function playBeep() {
+  say('🎉 context RUNNING — playing beep…', 'ok');
+  try {
+    const t = ctx.currentTime;
+    [880, 1320].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = f; o.type = 'square';
+      g.gain.setValueAtTime(0.25, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+      o.connect(g).connect(ctx.destination);
+      o.start(t + i * 0.05); o.stop(t + 0.5);
+    });
+    say('beep scheduled', 'ok');
+  } catch (e) { say('beep failed: ' + e.message, 'bad'); }
+}
+
+document.getElementById('beep').addEventListener('click', () => {
+  if (!armed) say('(tap registered, waiting for activation event…)');
+});
+
+// fallback: HTMLAudioElement with a tiny data-URI WAV (440Hz, 0.4s)
+document.getElementById('alt').addEventListener('click', () => {
+  say('trying <audio> element fallback…');
+  try {
+    const sr = 22050, n = Math.floor(sr * 0.4);
+    const data = new Uint8Array(44 + n * 2);
+    const dv = new DataView(data.buffer);
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, 'RIFF'); dv.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt ');
+    dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+    dv.setUint32(24, sr, true); dv.setUint32(28, sr * 2, true);
+    dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); w(36, 'data');
+    dv.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) dv.setInt16(44 + i * 2, Math.sin(2 * Math.PI * 440 * i / sr) * 12000, true);
+    const a = new Audio('data:audio/wav;base64,' + btoa(String.fromCharCode(...data)));
+    a.volume = 1;
+    a.play().then(() => say('<audio> play() resolved — you should hear a tone', 'ok'))
+            .catch(e => say('<audio> play() rejected: ' + e.message, 'bad'));
+    a.onended = () => say('<audio> finished', 'ok');
+  } catch (e) { say('<audio> threw: ' + e.message, 'bad'); }
+});
+})();
+</script>
+</body>
+</html>

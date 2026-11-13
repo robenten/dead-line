@@ -19,7 +19,7 @@
                          start/resume/replay · pause button in the HUD
   As HUMAN (current gameplay):
     · Wandering humans are your recruits — touch them with your head
-      to grow the line. Headbutting zombies scores but doesn't grow.
+      to grow the line. Touching zombies unpowered is fatal — grab medkits to power up.
     · Recruits come in classes: SURVIVORS are bulk · FIGHTERS (red
       bandana) cut down zombies that catch the chain near them ·
       HUNTERS (green cap) snipe the nearest zombie · MEDICS (white
@@ -34,7 +34,7 @@
     · Medkits trigger an adrenaline rush: zombies flee, slowed.
   As ZOMBIE (the tables turn):
     · Humans are skittish — they flee when you get close. Herd them
-      with your body and headbutt them to convert them into growth.
+      with your body to convert them into growth (or touch-kill them while powered).
     · Humans reaching your body wrestle free — they can knock
       segments off your tail. A human reaching your head, or
       scattering you below 3 segments, ends the run.
@@ -812,7 +812,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.13.6'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.13.7'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 const Z_BREED = {
@@ -1109,6 +1109,15 @@ let score = 0, best = loadBestFor('human'), wave = 1, kills = 0;
 let stepMs = START_MS, acc = 0, interp = 0;
 let gt = 0;                      // game clock — only advances while playing
 let foes = [], pickup = null, nextPickupAt = 0;
+let devouring = null;   // leader caught unpowered — the eat-out beat before the card
+let pops = [];          // floating powered-kill score pops
+let powerCombo = 0;     // Pac-Man ladder within one rush: 200 400 800 1600
+function powerKillPts(f) {
+  powerCombo = Math.min(powerCombo + 1, 4);
+  const pts = 200 << (powerCombo - 1);
+  pops.push({ x: (f.x + .5) * CELL, y: (f.y + .5) * CELL, txt: String(pts), bornAt: gt, until: gt + 800 });
+  return pts;
+}
 let allies = [], nextAllySpawnAt = 0; // wandering recruits (human role)
 let pending = [];                     // characters waiting to join the tail
 let shots = [];                        // hunter tracers
@@ -1160,12 +1169,12 @@ const HUMAN_LEGEND = `
   <li><i class="dot d-fight"></i><span>Fighters cut down zombies that catch the chain near them</span></li>
   <li><i class="dot d-hunt"></i><span>Hunters snipe the nearest zombie, on a cooldown</span></li>
   <li><i class="dot d-med"></i><span>Medics slowly regrow lost recruits, up to your peak</span></li>
-  <li><i class="dot d-bite"></i><span>Zombies eat whoever they catch — medkits still trigger a rush</span></li>
+  <li><i class="dot d-bite"></i><span>Touch a zombie unpowered and it devours your leader — medkits turn the tables</span></li>
   <li><i class="dot d-run"></i><span>Runners are quick; Brutes need three hits and bite deep</span></li>
   <li><i class="dot d-lunge"></i><span>Lungers flash red, then dash — step out of the way</span></li>`;
 const ZOMBIE_LEGEND = `
-  <li><i class="dot d-hum"></i><span>Headbutt humans to convert them into growth</span></li>
-  <li><i class="dot d-brain"></i><span>Brains trigger a frenzy — the living scatter</span></li>
+  <li><i class="dot d-hum"></i><span>Touch humans unpowered and you're overwhelmed — recruit wanderers to grow</span></li>
+  <li><i class="dot d-brain"></i><span>Brains power you up — touch-kill the fleeing living to grow</span></li>
   <li><i class="dot d-bite"></i><span>Humans wrestle free — guard your tail</span></li>`;
 
 function applyRoleSkin() {
@@ -1219,6 +1228,7 @@ function reset() {
   nextAllySpawnAt = ALLY_SPAWN_MS;
   nextSpawnAt = 2500; waveNextAt = WAVE_MS;
   pickup = null; nextPickupAt = 8000 + Math.random() * 4000;
+  devouring = null; pops = []; powerCombo = 0;
   frenzyUntil = 0;
   stains = []; particles = [];
   deathAt = 0; hurtAt = 0; headFlashUntil = 0; deathCause = '';
@@ -1278,7 +1288,7 @@ function step() {
 function killFoe(f, pts) { // shared by headbutts, fighter saves and hunter shots
   const i = foes.indexOf(f);
   if (i < 0) return;
-  if ((f.hp || 1) > 1) { // brutes soak hits — the third one lands
+  if ((f.hp || 1) > 1 && gt >= frenzyUntil) { // brutes soak hits — unless the line is powered
     f.hp--;
     f.hitAt = gt;
     score += 10; // chip points
@@ -1309,12 +1319,27 @@ function killFoe(f, pts) { // shared by headbutts, fighter saves and hunter shot
   updateHud();
 }
 
-function devour(i) { // headbutt — points for the kill; recruitment is the human growth path
+function devour(i) { // the leader runs into a foe — whose funeral depends on the power state
   const f = foes[i];
-  killFoe(f, 25 * wave);
-  headFlashUntil = gt + 260;
-  if (role === 'zombie') // converting the living still grows the horde
-    pending.push(makeChar('zombie'), makeChar('zombie'));
+  if (gt < frenzyUntil) { // powered: the line devours everything it touches, brutes included
+    killFoe(f, powerKillPts(f));
+    headFlashUntil = gt + 260;
+    if (role === 'zombie') // eating the living still grows the horde
+      pending.push(makeChar('zombie'), makeChar('zombie'));
+    return;
+  }
+  // unpowered: the foe catches the leader and eats it on the spot — a short
+  // beat (hunched meal, the victim fading under it) before the card lands
+  state = 'dying';
+  devouring = { until: gt + 1200 };
+  f.mode = 'eat';
+  f.windup = null; f.lunge = null;
+  f.stunUntil = gt + 1300;
+  f.eat = { until: gt + EAT_MS, x: f.x, y: f.y, fx: f.fx, fy: f.fy, char: roster[0], nextGore: gt + 100 };
+  burst((f.x + .5) * CELL, (f.y + .5) * CELL, [roster[0].skin, roster[0].cloth, '#7a1f2b'], 14);
+  SND.hurt();
+  shake('md');
+  overTimer = setTimeout(() => die('head'), 1250); // let the meal land before the card
 }
 
 function recruit(i) { // touch a wanderer with your head — they join the tail
@@ -1332,16 +1357,18 @@ function eatPickup() {
   score += 150;
   pending.push(makeChar(role)); // reinforcements
   frenzyUntil = gt + FRENZY_MS;
+  powerCombo = 0; // the devour ladder resets every window — 200 400 800 1600
   SND.frenzy();
-  nextPickupAt = gt + 15000 + Math.random() * 6000;
+  nextPickupAt = gt + 9000 + Math.random() * 4000; // the gift is the primary weapon — keep it strategic, not rare
   burst((snake[0].x + .5) * CELL, (snake[0].y + .5) * CELL, role === 'human' ? MED_P : BRAIN_P, 16);
-  showToast(role === 'human' ? 'ADRENALINE!' : 'FRENZY!', { pink: role !== 'human' });
+  showToast(role === 'human' ? 'DEVOUR THEM!' : 'FRENZY!', { pink: role !== 'human' });
   updateHud();
 }
 
 function bite(f, idx) {
   // a foe reaching your chain pays for it — humans get thrown clear,
   // zombies settle in and devour their catch on the spot
+  if (gt < frenzyUntil) { killFoe(f, powerKillPts(f)); return; } // powered: contact is lethal
   if (role === 'human') {
     // a fighter within reach cuts the zombie down BEFORE it eats — no loss
     let fj = -1;
@@ -1404,7 +1431,7 @@ function bite(f, idx) {
 }
 
 function die(cause) {
-  if (state !== 'playing') return;
+  if (state !== 'playing' && state !== 'dying') return;
   state = 'over';
   deathCause = cause;
   deathAt = gt;
@@ -1503,7 +1530,7 @@ function updateFoes() {
   }
   // pickup lifecycle
   if (!pickup && gt >= nextPickupAt) spawnPickup();
-  if (pickup && gt >= pickup.expiresAt) { pickup = null; nextPickupAt = gt + 9000 + Math.random() * 5000; }
+  if (pickup && gt >= pickup.expiresAt) { pickup = null; nextPickupAt = gt + 8000 + Math.random() * 4000; }
 
   for (const f of foes) {
     if (state !== 'playing') break;
@@ -1562,8 +1589,13 @@ function stepFoe(f) {
           const ai = allies.findIndex(a => a.x === nx && a.y === ny);
           if (ai >= 0) { eatWanderer(f, ai); f.lunge = null; f.nextLungeAt = gt + LUNGER_CD; return; }
           const idx = snake.findIndex(s => s.x === nx && s.y === ny);
-          if (idx === 0) { die('head'); return; }
-          if (idx > 0) { bite(f, idx); f.lunge = null; f.nextLungeAt = gt + LUNGER_CD; return; }
+          if (idx >= 0) { // powered line eats the lunger mid-dash; unpowered it eats you
+            if (gt < frenzyUntil) killFoe(f, powerKillPts(f));
+            else if (idx === 0) die('head');
+            else bite(f, idx);
+            f.lunge = null; f.nextLungeAt = gt + LUNGER_CD;
+            return;
+          }
           return; // clean dash step — no wander resolution mid-flight
         }
       } else if (!frenzy && gt >= (f.nextLungeAt || 0) &&
@@ -1631,8 +1663,11 @@ function stepFoe(f) {
   const ai = allies.findIndex(a => a.x === nx && a.y === ny);
   if (ai >= 0) { eatWanderer(f, ai); return; }
   const idx = snake.findIndex(s => s.x === nx && s.y === ny);
-  if (idx === 0) { die('head'); return; }
-  if (idx > 0) bite(f, idx);
+  if (idx >= 0) { // contact with the line — powered contact is lethal to foes
+    if (gt < frenzyUntil) { killFoe(f, powerKillPts(f)); return; }
+    if (idx === 0) die('head'); else bite(f, idx);
+    return;
+  }
 }
 
 /* ═══════════════ wandering recruits (human role) ═══════════════ */
@@ -2297,17 +2332,20 @@ function drawSnake(t) {
   const n = pts.length;
   const frenzy = t < frenzyUntil;
 
+  const skipHead = state === 'dying' && devouring; // the leader is being eaten — it's already gone
   // chain base — a soft rope under the characters so the line reads as a chain
   if (n > 1) {
-    ctx.strokeStyle = role === 'human' ? 'rgba(163,241,96,.14)' : 'rgba(143,174,122,.16)';
+    ctx.strokeStyle = frenzy ? 'rgba(255,209,102,.28)' : role === 'human' ? 'rgba(163,241,96,.14)' : 'rgba(143,174,122,.16)';
     ctx.lineWidth = 5 * Math.min(CHAR_BOOST, 1.25); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+    const r0 = skipHead ? 1 : 0;
+    ctx.beginPath(); ctx.moveTo(pts[r0].x, pts[r0].y);
     for (let i = 1; i < n; i++) ctx.lineTo(pts[i].x, pts[i].y);
     ctx.stroke();
   }
 
   // characters, tail → head so the leader overlays the line
   for (let i = n - 1; i >= 0; i--) {
+    if (i === 0 && skipHead) continue;
     const p = pts[i];
     let fx = dir.x, fy = dir.y;
     if (n > 1) {
@@ -2328,17 +2366,32 @@ function drawSnake(t) {
     else drawZombieChar(p.x, p.y, t, c, o);
   }
 
-  // leader marker — soft ring around the head character
+  // leader marker — a soft ring; gold while the line is powered
   const h = pts[0];
-  ctx.strokeStyle = role === 'human' ? 'rgba(163,241,96,.35)' : 'rgba(143,174,122,.4)';
+  if (!skipHead) {
+  ctx.strokeStyle = frenzy ? 'rgba(255,209,102,.85)' : role === 'human' ? 'rgba(163,241,96,.35)' : 'rgba(143,174,122,.4)';
   ctx.lineWidth = 1.4;
   ctx.beginPath(); ctx.arc(h.x, h.y, 14 * Math.min(CHAR_BOOST, 1.2), 0, 7); ctx.stroke();
+  } // !skipHead
   // blood-ring after a fresh kill
-  if (t < headFlashUntil) {
+  if (!skipHead && t < headFlashUntil) {
     const fp = 1 - (headFlashUntil - t) / 260;
     ctx.strokeStyle = `rgba(229,72,77,${(.8 * (1 - fp)).toFixed(3)})`;
     ctx.lineWidth = 2.2;
     ctx.beginPath(); ctx.arc(h.x, h.y, CELL * (.55 + fp * .5), 0, 7); ctx.stroke();
+  }
+}
+
+function drawPops(t) { // floating powered-kill scores
+  pops = pops.filter(p => t < p.until);
+  for (const p of pops) {
+    const k = clamp01((t - p.bornAt) / 800);
+    ctx.globalAlpha = 1 - k;
+    ctx.fillStyle = '#ffd166';
+    ctx.font = `700 ${Math.round(14 * CHAR_BOOST)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(p.txt, p.x, p.y - 10 - 16 * k);
+    ctx.globalAlpha = 1;
   }
 }
 
@@ -2378,7 +2431,7 @@ function draw(t) {
 
   drawSnake(t);
   drawShots(t);
-  drawParticles(t);
+  drawParticles(t); drawPops(t);
 
   // vignette
   ctx.fillStyle = getVignette();

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#090d0f">
-<meta name="description" id="meta-desc" content="DEAD LINE — a graveyard-shift snake game. Recruit the living, dodge the horde, turn the tables with a medkit.">
+<meta name="description" id="meta-desc" content="DEAD LINE — a graveyard-shift snake game. Recruit the living, dodge the horde, fight back with a weapon.">
 <title>DEAD LINE — graveyard shift</title>
 <!--
   ─────────────────────────────────────────────────────────────
@@ -20,7 +20,7 @@
                          start/resume/replay · pause button in the HUD
   As HUMAN (current gameplay):
     · Wandering humans are your recruits — touch them with your head
-      to grow the line. Touching zombies unpowered is fatal — grab medkits to power up.
+      to grow the line. Touching zombies unpowered is fatal — grab a weapon to fight back.
     · Recruits come in classes: SURVIVORS are bulk · FIGHTERS (red
       bandana) cut down zombies that catch the chain near them ·
       HUNTERS (green cap) snipe the nearest zombie · MEDICS (white
@@ -32,7 +32,7 @@
     · Zombies eat caught characters (~1.5s) AND unrecruited
       wanderers. A catch on the HEAD, or dropping below 3 segments,
       ends the run.
-    · Medkits trigger an adrenaline rush: zombies flee, slowed.
+    · Weapons trigger an adrenaline rush: zombies flee, slowed.
   As ZOMBIE (the tables turn):
     · Humans are skittish — they flee when you get close. Herd them
       with your body to convert them into growth (or touch-kill them while powered).
@@ -732,7 +732,7 @@ const I18N = {
   en: {
     docTitle: 'DEAD LINE — graveyard shift',
     tagline: 'graveyard shift',
-    meta: 'DEAD LINE — a graveyard-shift snake game. Recruit the living, dodge the horde, turn the tables with a medkit.',
+    meta: 'DEAD LINE — a graveyard-shift snake game. Recruit the living, dodge the horde, fight back with a weapon.',
     roleHuman: 'Human', 
     tagHuman: 'Outnumbered,<br>not outgunned', 
     
@@ -754,7 +754,7 @@ const I18N = {
     gameOver: 'Game over',
     hudScore: 'Score', hudWave: 'Wave', hudKills: 'Kills', hudBest: 'Best',
     frenzyH: 'Rush', 
-    toastWave: 'WAVE {n}', powerH: 'DEVOUR THEM!', 
+    toastWave: 'WAVE {n}', powerH: 'FIGHT BACK!', 
     soundOn: 'SOUND ON', soundOff: 'SOUND OFF',
     mutedBoot: 'Sound off — tap the speaker icon to enable',
     ariaMute: 'Mute sound', ariaUnmute: 'Unmute sound', ariaPause: 'Pause game', ariaResume: 'Resume game',
@@ -764,7 +764,7 @@ const I18N = {
     lg2: 'Fighters cut down zombies that catch the chain near them',
     lg3: 'Hunters snipe the nearest zombie, on a cooldown',
     lg4: 'Medics slowly regrow lost recruits, up to your peak',
-    lg5: 'Touch a zombie unpowered and it devours your leader — medkits turn the tables',
+    lg5: 'Touch a zombie unpowered and it devours your leader — a weapon turns the tables',
     lg6: 'Runners are quick; Brutes need three hits and bite deep',
     lg7: 'Lungers flash red, then dash — step out of the way',
     
@@ -774,7 +774,7 @@ const I18N = {
   ja: {
     docTitle: 'DEAD LINE — 墓場の夜番',
     tagline: '墓場の夜番',
-    meta: 'DEAD LINE — 墓場で繰り広げるスネーク。生存者を仲間に、屍の群れを避け、救急箱で形勢逆転。',
+    meta: 'DEAD LINE — 墓場で繰り広げるスネーク。生存者を仲間に、屍の群れを避け、武器で反撃せよ。',
     roleHuman: '人類', 
     tagHuman: '数で勝てなくても<br>火力で勝つ', 
     
@@ -796,7 +796,7 @@ const I18N = {
     gameOver: 'ゲームオーバー',
     hudScore: 'スコア', hudWave: '波', hudKills: '撃破', hudBest: '最高',
     frenzyH: '突撃', 
-    toastWave: '第{n}波', powerH: '食らい尽くせ！', 
+    toastWave: '第{n}波', powerH: '反撃だ！', 
     soundOn: 'サウンド オン', soundOff: 'サウンド オフ',
     mutedBoot: '消音中 — スピーカーアイコンで戻せます',
     ariaMute: 'ミュート', ariaUnmute: 'ミュート解除', ariaPause: '一時停止', ariaResume: '再開',
@@ -806,7 +806,7 @@ const I18N = {
     lg2: 'ファイターは隊列に迫るゾンビを切り捨てる',
     lg3: 'ハンターは最寄りのゾンビを狙撃（クールダウン制）',
     lg4: 'メディックは失った仲間を少しずつ再生',
-    lg5: '無強化でゾンビに触れるとリーダーが食われる — 救急箱で逆転',
+    lg5: '無強化でゾンビに触れるとリーダーが食われる — 武器で反撃せよ',
     lg6: 'ランナーは速い。ブルートは3発必要で噛みも深い',
     lg7: 'ランジャーは赤く光ってから突進 — 脇に避けろ',
     
@@ -816,7 +816,7 @@ const I18N = {
   'zh-hans': {
     docTitle: 'DEAD LINE — 墓园夜班',
     tagline: '墓园夜班',
-    meta: 'DEAD LINE — 一场墓园夜班的贪吃蛇。招募幸存者，躲开尸群，靠医疗包扭转局势。',
+    meta: 'DEAD LINE — 一场墓园夜班的贪吃蛇。招募幸存者，躲开尸群，靠武器反击。',
     roleHuman: '人类', 
     tagHuman: '寡不敌众，<br>火力不输', 
     
@@ -838,7 +838,7 @@ const I18N = {
     gameOver: '游戏结束',
     hudScore: '得分', hudWave: '波次', hudKills: '击杀', hudBest: '最高',
     frenzyH: '狂奔', 
-    toastWave: '第{n}波', powerH: '吃光它们！', 
+    toastWave: '第{n}波', powerH: '反击！', 
     soundOn: '声音开启', soundOff: '声音关闭',
     mutedBoot: '已静音——点击扬声器图标开启',
     ariaMute: '静音', ariaUnmute: '取消静音', ariaPause: '暂停', ariaResume: '继续',
@@ -848,7 +848,7 @@ const I18N = {
     lg2: '战士会砍翻咬住队伍附近丧尸',
     lg3: '猎人冷却完毕就狙杀最近的丧尸',
     lg4: '医师会慢慢补回失去的队员，直到峰值',
-    lg5: '无强化时碰到丧尸，队长会被吞掉——医疗包能扭转局势',
+    lg5: '无强化时碰到丧尸，队长会被吞掉——拾取武器反击',
     lg6: '疾行者跑得快；蛮击者要打三下，咬人也狠',
     lg7: '突袭者会闪红光再猛冲——快躲开',
     
@@ -858,7 +858,7 @@ const I18N = {
   'zh-hant': {
     docTitle: 'DEAD LINE — 墓園夜班',
     tagline: '墓園夜班',
-    meta: 'DEAD LINE — 一場墓園夜班的貪吃蛇。招募倖存者，閃避屍群，靠急救箱扭轉局勢。',
+    meta: 'DEAD LINE — 一場墓園夜班的貪吃蛇。招募倖存者，閃避屍群，靠武器反擊。',
     roleHuman: '人類', 
     tagHuman: '寡不敵眾，<br>火力不輸', 
     
@@ -880,7 +880,7 @@ const I18N = {
     gameOver: '遊戲結束',
     hudScore: '得分', hudWave: '波次', hudKills: '擊殺', hudBest: '最高',
     frenzyH: '狂奔', 
-    toastWave: '第{n}波', powerH: '吃光它們！', 
+    toastWave: '第{n}波', powerH: '反擊！', 
     soundOn: '聲音開啟', soundOff: '聲音關閉',
     mutedBoot: '已靜音——點擊喇叭圖示開啟',
     ariaMute: '靜音', ariaUnmute: '取消靜音', ariaPause: '暫停', ariaResume: '繼續',
@@ -890,7 +890,7 @@ const I18N = {
     lg2: '鬥士會砍翻咬住隊伍附近的殭屍',
     lg3: '獵人冷卻完畢就狙殺最近的殭屍',
     lg4: '醫護會慢慢補回失去的隊員，直到峰值',
-    lg5: '無強化時碰到殭屍，隊長會被吞掉——急救箱能扭轉局勢',
+    lg5: '無強化時碰到殭屍，隊長會被吞掉——拾取武器反擊',
     lg6: '疾行者跑得快；蠻擊者要打三下，咬人也狠',
     lg7: '突襲者會閃紅光再猛衝——快閃開',
     
@@ -900,7 +900,7 @@ const I18N = {
   es: {
     docTitle: 'DEAD LINE — turno de noche',
     tagline: 'turno de noche',
-    meta: 'DEAD LINE — un snake de guardia nocturna. Recluta a los vivos, esquiva la horda y da la vuelta con un botiquín.',
+    meta: 'DEAD LINE — un snake de guardia nocturna. Recluta a los vivos, esquiva la horda y contraataca con un arma.',
     roleHuman: 'Humano', 
     tagHuman: 'En desventaja,<br>no desarmado', 
     
@@ -922,7 +922,7 @@ const I18N = {
     gameOver: 'Fin del juego',
     hudScore: 'Puntos', hudWave: 'Oleada', hudKills: 'Bajas', hudBest: 'Récord',
     frenzyH: 'Ímpetu', 
-    toastWave: 'OLEADA {n}', powerH: '¡DEVÓRALOS!', 
+    toastWave: 'OLEADA {n}', powerH: '¡CONTRATACA!', 
     soundOn: 'SONIDO: SÍ', soundOff: 'SONIDO: NO',
     mutedBoot: 'Sonido apagado — toca el altavoz para activarlo',
     ariaMute: 'Silenciar', ariaUnmute: 'Activar sonido', ariaPause: 'Pausar', ariaResume: 'Reanudar',
@@ -932,7 +932,7 @@ const I18N = {
     lg2: 'Los luchadores abaten a los zombis que alcanzan la fila cerca de ellos',
     lg3: 'Los cazadores disparan al zombi más cercano, con recarga',
     lg4: 'Los médicos recuperan poco a poco a tus reclutas, hasta tu máximo',
-    lg5: 'Tocar un zombi sin poder te devora al líder — los botiquines lo cambian todo',
+    lg5: 'Tocar un zombi sin poder te devora al líder — un arma lo cambia todo',
     lg6: 'Los corredores son rápidos; los brutos aguantan tres golpes y muerden fuerte',
     lg7: 'Los saltones destellan en rojo y embisten — quítate de en medio',
     
@@ -942,7 +942,7 @@ const I18N = {
   fr: {
     docTitle: 'DEAD LINE — garde de nuit',
     tagline: 'garde de nuit',
-    meta: 'DEAD LINE — un snake de garde nocturne. Recrute les vivants, esquive la horde, renverse la vapeur avec une trousse.',
+    meta: 'DEAD LINE — un snake de garde nocturne. Recrute les vivants, esquive la horde, contre-attaque avec une arme.',
     roleHuman: 'Humain', 
     tagHuman: 'En infériorité,<br>pas désarmé', 
     
@@ -964,7 +964,7 @@ const I18N = {
     gameOver: 'Partie terminée',
     hudScore: 'Score', hudWave: 'Vague', hudKills: 'Élim.', hudBest: 'Record',
     frenzyH: 'Ruée', 
-    toastWave: 'VAGUE {n}', powerH: 'DÉVORE-LES !', 
+    toastWave: 'VAGUE {n}', powerH: 'RIPOSTE !', 
     soundOn: 'SON ACTIVÉ', soundOff: 'SON COUPÉ',
     mutedBoot: 'Son coupé — touche l’icône haut-parleur pour l’activer',
     ariaMute: 'Couper le son', ariaUnmute: 'Activer le son', ariaPause: 'Mettre en pause', ariaResume: 'Reprendre',
@@ -974,7 +974,7 @@ const I18N = {
     lg2: 'Les bagarreurs abattent les zombies qui touchent la file',
     lg3: 'Les chasseurs tirent sur le zombie le plus proche, avec rechargement',
     lg4: 'Les médecins font revenir peu à peu tes recrues, jusqu’à ton record',
-    lg5: 'Toucher un zombie sans pouvoir dévore ton chef — les trousses changent tout',
+    lg5: 'Toucher un zombie sans pouvoir dévore ton chef — une arme renverse tout',
     lg6: 'Les coureurs sont vites ; les brutes encaissent trois coups et mordent fort',
     lg7: 'Les bondisseurs flashent en rouge puis foncent — écarte-toi',
     
@@ -984,7 +984,7 @@ const I18N = {
   de: {
     docTitle: 'DEAD LINE — Nachtschicht',
     tagline: 'Nachtschicht',
-    meta: 'DEAD LINE — ein Snake auf dem Friedhof. Rekrutiere die Lebenden, weiche der Horde aus, dreh den Spieß mit einem Verbandskasten.',
+    meta: 'DEAD LINE — ein Snake auf dem Friedhof. Rekrutiere die Lebenden, weiche der Horde aus, schlag mit einer Waffe zurück.',
     roleHuman: 'Mensch', 
     tagHuman: 'In der Unterzahl,<br>nicht unterlegen', 
     
@@ -1006,7 +1006,7 @@ const I18N = {
     gameOver: 'Game Over',
     hudScore: 'Punkte', hudWave: 'Welle', hudKills: 'Kills', hudBest: 'Rekord',
     frenzyH: 'Rausch', 
-    toastWave: 'WELLE {n}', powerH: 'FRISS SIE!', 
+    toastWave: 'WELLE {n}', powerH: 'SCHLAG ZURÜCK!', 
     soundOn: 'TON AN', soundOff: 'TON AUS',
     mutedBoot: 'Ton aus — tippe auf das Lautsprechersymbol',
     ariaMute: 'Ton aus', ariaUnmute: 'Ton ein', ariaPause: 'Pausieren', ariaResume: 'Fortsetzen',
@@ -1016,7 +1016,7 @@ const I18N = {
     lg2: 'Kämpfer hacken Zombies nieder, die die Kette nahe ihnen fassen',
     lg3: 'Jäger schießen den nächsten Zombie ab, mit Abklingzeit',
     lg4: 'Sanitäter lassen verlorene Rekruten langsam zurückwachsen',
-    lg5: 'Zombie ohne Power berühren verschlingt deinen Anführer — Verbände drehen den Spieß',
+    lg5: 'Zombie ohne Power berühren verschlingt deinen Anführer — die Waffe dreht den Spieß',
     lg6: 'Läufer sind schnell; Brutes stecken drei Treffer weg und beißen tief',
     lg7: 'Pouncer blinken rot und stoßen dann zu — geh aus dem Weg',
     
@@ -1026,7 +1026,7 @@ const I18N = {
   ko: {
     docTitle: 'DEAD LINE — 묘지 야근',
     tagline: '묘지 야근',
-    meta: 'DEAD LINE — 묘지 야근 스네이크. 생존자를 모으고, 무리를 피하고, 구급상자로 역전하세요.',
+    meta: 'DEAD LINE — 묘지 야근 스네이크. 생존자를 모으고, 무리를 피하고, 무기로 반격하세요.',
     roleHuman: '인간', 
     tagHuman: '숫자는 못 해도<br>기세는 이긴다', 
     
@@ -1048,7 +1048,7 @@ const I18N = {
     gameOver: '게임 오버',
     hudScore: '점수', hudWave: '파', hudKills: '처치', hudBest: '최고',
     frenzyH: '돌격', 
-    toastWave: '제{n}파', powerH: '씹어 삼켜!', 
+    toastWave: '제{n}파', powerH: '반격!', 
     soundOn: '사운드 켬', soundOff: '사운드 끔',
     mutedBoot: '음소거 중 — 스피커 아이콘을 탭하면 켜집니다',
     ariaMute: '음소거', ariaUnmute: '음소거 해제', ariaPause: '일시정지', ariaResume: '계속',
@@ -1058,7 +1058,7 @@ const I18N = {
     lg2: '전사는 대열 근처의 좀비를 베어 넘긴다',
     lg3: '사수는 쿨다운마다 가장 가까운 좀비를 저격',
     lg4: '의무병은 잃은 대원을 서서히 되살린다',
-    lg5: '무강화 상태로 좀비에 닿으면 대장이 잡아먹힌다 — 구급상자가 역전',
+    lg5: '무강화 상태로 좀비에 닿으면 대장이 잡아먹힌다 — 무기로 반격',
     lg6: '질주자는 빠르다. 왕은 세 번을 맞아야 쓰러지고 물기도 세다',
     lg7: '도약자는 붉게 빛나며 돌진 — 비켜라',
     
@@ -1177,7 +1177,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.14'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.14.2'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 const Z_BREED = {
@@ -1223,7 +1223,7 @@ const HUMAN_SHIRTS   = ['#5a7d8c','#7d6a8c','#8c7d5a','#6a8c7d','#8c5a6a','#8c6a
 const GORE    = ['#7a1f2b','#a0303a','#8fae7a','#5d6e4e'];
 const ROT     = ['#4a5a48','#7a1f2b','#3f4a52','#6f9b6d'];
 const BRAIN_P = ['#ff9ec7','#f27ba8','#ffd3e4'];
-const MED_P   = ['#d8e6df','#a3f160','#e8f7d0'];
+const RUSH_P  = ['#d8e6df','#a3f160','#e8f7d0'];
 
 const loadBestFor = r => {
   try {
@@ -1408,7 +1408,7 @@ const SND = (() => {
     note('sawtooth', 392, 0, .04, .4, .028, .04, 900);
   } catch {} }
 
-  function frenzy(){ if (!live()) return; try {                  // medkit / brain
+  function frenzy(){ if (!live()) return; try {                  // weapon rush
     const arp = [523.25, 659.25, 880, 1318.5];
     arp.forEach((f, i) => note('triangle', f, 0, i * .055, .12, .055));
     note('sine', 500, 1600, 0, .45, .025);
@@ -1569,8 +1569,7 @@ function startGame(d) {
   SND.droneStart();
 }
 
-let pausedAt = 0;
-function pause()  { if (state !== 'playing') return; state = 'paused'; pausedAt = performance.now(); show(ovPause); syncPauseBtn(); SND.droneStop(); }
+function pause()  { if (state !== 'playing') return; state = 'paused'; show(ovPause); syncPauseBtn(); SND.droneStop(); }
 function resume() { if (state !== 'paused')  return; state = 'playing'; hideOverlays(); syncPauseBtn(); SND.droneStart(); }
 
 function syncPauseBtn() {
@@ -1667,7 +1666,7 @@ function recruit(i) { // touch a wanderer with your head — they join the tail
   score += 10;
   SND.blip();
   pending.push({ cls: a.cls, skin: a.skin, hair: a.hair, cloth: a.cloth, arms: 2, phase: a.phase });
-  burst((a.x + .5) * CELL, (a.y + .5) * CELL, MED_P, 8);
+  burst((a.x + .5) * CELL, (a.y + .5) * CELL, RUSH_P, 8);
   updateHud();
 }
 
@@ -1679,7 +1678,7 @@ function eatPickup() {
   powerCombo = 0; // the devour ladder resets every window — 200 400 800 1600
   SND.frenzy();
   nextPickupAt = gt + 9000 + Math.random() * 4000; // the gift is the primary weapon — keep it strategic, not rare
-  burst((snake[0].x + .5) * CELL, (snake[0].y + .5) * CELL, MED_P, 16);
+  burst((snake[0].x + .5) * CELL, (snake[0].y + .5) * CELL, RUSH_P, 16);
   showToast(t('powerH'));
   updateHud();
 }
@@ -2067,7 +2066,7 @@ function updateAllies() {
     } else if (c.cls === 'medic' && gt >= (c.nextHeal || 0) && snake.length < maxLen && pending.length < 3) {
       c.nextHeal = gt + MEDIC_CD;
       pending.push(makeChar('human', 'survivor')); // a fresh survivor regrows at the tail
-      burst((se.x + .5) * CELL, (se.y + .5) * CELL, MED_P, 6);
+      burst((se.x + .5) * CELL, (se.y + .5) * CELL, RUSH_P, 6);
     }
   }
 }
@@ -2176,9 +2175,9 @@ btnMute.addEventListener('click', e => {
 });
 ovStart.addEventListener('click', () => startGame());
 ovPause.addEventListener('click', () => {
-  // the tap that paused the game also fires a click here ~instantly — ignore
-  // it, or tap-to-pause would resume itself; a real resume comes later
-  if (performance.now() - pausedAt < 350) return;
+  // the tap that paused also fires a ghost click here ~instantly — the
+  // pausing touchend set the flag; a real tap clears it on its own touchstart
+  if (suppressResumeClick) return;
   resume();
 });
 ovOver.addEventListener('click', () => { if (state === 'over') startGame(); });
@@ -2195,8 +2194,10 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) pause
 const SWIPE_MIN = 22;                 // px of travel before a swipe commits
 let touchId = null, tx = 0, ty = 0;   // steering anchor (re-anchors so drags chain turns)
 let sx = 0, sy = 0, tapOnBoard = false; // touch origin — a <10px drift there is a tap
+let suppressResumeClick = false; // the ghost click of the pausing tap must not instantly resume
 
 document.addEventListener('touchstart', e => {
+  suppressResumeClick = false;        // a real new tap re-arms tap-to-resume
   if (touchId !== null) return;       // first finger owns steering
   const t = e.changedTouches[0];
   touchId = t.identifier; tx = t.clientX; ty = t.clientY;
@@ -2229,7 +2230,7 @@ document.addEventListener('touchend', e => {
     // tap-to-pause: a touch that ends where it began (<10px total drift) on the
     // board itself while playing. Swipes steer (they re-anchor far away), taps
     // freeze the action. While paused, the pause card's own tap-to-resume runs.
-    if (tapOnBoard && state === 'playing' && Math.hypot(t.clientX - sx, t.clientY - sy) < 10) pause();
+    if (tapOnBoard && state === 'playing' && Math.hypot(t.clientX - sx, t.clientY - sy) < 10) { pause(); suppressResumeClick = true; }
     break;
   }
 }, { passive: true });
@@ -2506,22 +2507,33 @@ function drawPickup(t) {
   const cx = (pickup.x + .5) * CELL, cy = (pickup.y + .5) * CELL;
   const alpha = urgent ? .45 + .45 * Math.abs(Math.sin(t / 110)) : 1;
 
-  { // MEDKIT
+  { // WEAPON — a machete: grab it and fight back
     const s = CELL * .37 * Math.sqrt(CHAR_BOOST) * (1 + .06 * Math.sin(t / 240));
     ctx.save();
     ctx.globalAlpha = alpha;
-    // soft halo (was canvas shadowBlur — slow on phones)
+    // soft halo (was canvas shadowBlur — slow on phones); gold matches the powered ring
     const halo = ctx.createRadialGradient(cx, cy, s, cx, cy, s + 16);
-    halo.addColorStop(0,  'rgba(163,241,96,.25)');
-    halo.addColorStop(.5, 'rgba(163,241,96,.09)');
-    halo.addColorStop(1,  'rgba(163,241,96,0)');
+    halo.addColorStop(0,  'rgba(255,209,102,.28)');
+    halo.addColorStop(.5, 'rgba(255,209,102,.10)');
+    halo.addColorStop(1,  'rgba(255,209,102,0)');
     ctx.fillStyle = halo;
     ctx.beginPath(); ctx.arc(cx, cy, s + 16, 0, 7); ctx.fill();
-    ctx.fillStyle = '#dde6df';
-    ctx.beginPath(); ctx.roundRect(cx - s, cy - s * .78, s * 2, s * 1.56, 4); ctx.fill();
-    ctx.fillStyle = '#3fae5a';
-    ctx.fillRect(cx - 2.1, cy - s * .55, 4.2, s * 1.1);
-    ctx.fillRect(cx - s * .55, cy - 2.1, s * 1.1, 4.2);
+    // blade, guard, grip — angled like a raised strike
+    ctx.translate(cx, cy);
+    ctx.rotate(-.62);
+    ctx.fillStyle = '#d3ddd6';                          // steel blade
+    ctx.beginPath();
+    ctx.moveTo(-s * .1, -s * .95);
+    ctx.lineTo(s * .62, -s * .55);
+    ctx.lineTo(s * .66, -s * .25);
+    ctx.lineTo(-s * .1, -s * .35);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#f4f9f4'; ctx.lineWidth = .9;   // edge glint
+    ctx.beginPath(); ctx.moveTo(-s * .08, -s * .9); ctx.lineTo(s * .6, -s * .53); ctx.stroke();
+    ctx.fillStyle = '#8a5f45';                          // grip
+    ctx.beginPath(); ctx.roundRect(-s * .16, -s * .32, s * .32, s * 1.1, 2); ctx.fill();
+    ctx.fillStyle = '#2a3830';                          // guard
+    ctx.fillRect(-s * .26, -s * .42, s * .52, s * .14);
     ctx.restore();
   }
 }

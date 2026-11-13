@@ -757,6 +757,18 @@ canvas.height = SIZE * DPR;
 // pivot sits on the body's visual center so the growth is balanced.
 const CHAR_SCALE = 1.2;
 const CHAR_PIVOT_Y = -2.5;   // head −8.5 … feet +8.6 → visual center ≈ −2.5
+// small-screen legibility: the board shrinks on phones, so characters are
+// drawn larger relative to their cells to stay readable — pure render math,
+// the 24×24 collision grid is untouched. Boards ≥516px (desktop/tablet)
+// render exactly as before. boost = 516 / board-width, clamped to [1, 1.4].
+let CHAR_BOOST = 1;
+function updateCharBoost(){
+  try {
+    CHAR_BOOST = Math.max(1, Math.min(1.4, 516 / Math.max(canvas.getBoundingClientRect().width, 1)));
+  } catch { CHAR_BOOST = 1; }
+}
+updateCharBoost();
+window.addEventListener('resize', updateCharBoost);
 
 // cached zombie eye-glow sprites — per-frame canvas shadowBlur is slow on phone
 // GPUs, so the eye + halo is baked once and blitted per eye. Backing carries
@@ -799,7 +811,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.13.3'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.13.4'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 const Z_BREED = {
@@ -1961,11 +1973,11 @@ function drawZombieChar(cx, cy, t, c, o) {
   const wob = Math.sin(t / 340 + c.phase) * .07;
   ctx.save();
   ctx.translate(cx + fx * (chasing ? 1.4 : 0), cy + bob);
-  ctx.translate(0, CHAR_PIVOT_Y); ctx.scale(CHAR_SCALE, CHAR_SCALE); ctx.translate(0, -CHAR_PIVOT_Y); // enlarge
+  ctx.translate(0, CHAR_PIVOT_Y); ctx.scale(CHAR_SCALE * CHAR_BOOST, CHAR_SCALE * CHAR_BOOST); ctx.translate(0, -CHAR_PIVOT_Y); // enlarge (+ small-screen boost)
   // ── breed silhouettes — unmistakable at a glance, before any animation ──
   const breed = c.type || 'walker';
   if (breed === 'runner') ctx.scale(.72, 1.14);          // whippet-slim, tall
-  else if (breed === 'brute') ctx.scale(1.5, 1.3);      // a wall of meat
+  else if (breed === 'brute') { const bb = Math.min(1.5, 2.15 / (1.2 * CHAR_BOOST)); ctx.scale(bb, bb * .867); } // a wall of meat — total capped ≈2.15 so phones don't push it into mush
   else if (breed === 'lunger') ctx.scale(1.06, .9);     // coiled crouch
   // per-breed gait: stride speed/amplitude and forward lean (render only)
   const gait = breed === 'runner' ? { spd: 85,  amp: 2.2, lean: .14 }  // sprint, long stride
@@ -2067,7 +2079,7 @@ function drawHumanChar(cx, cy, t, c, o) {
   ctx.save();
   if (o.alpha != null) ctx.globalAlpha = o.alpha;
   ctx.translate(cx + fx * (o.lean || 0), cy + bob);
-  ctx.translate(0, CHAR_PIVOT_Y); ctx.scale(CHAR_SCALE, CHAR_SCALE); ctx.translate(0, -CHAR_PIVOT_Y); // enlarge
+  ctx.translate(0, CHAR_PIVOT_Y); ctx.scale(CHAR_SCALE * CHAR_BOOST, CHAR_SCALE * CHAR_BOOST); ctx.translate(0, -CHAR_PIVOT_Y); // enlarge (+ small-screen boost)
   ctx.fillStyle = 'rgba(0,0,0,.28)';
   ctx.beginPath(); ctx.ellipse(0, 5, 6.8, 3.1, 0, 0, 7); ctx.fill();
   if (o.panic && !stunned) {
@@ -2162,7 +2174,7 @@ function drawPickup(t) {
 
   if (role === 'zombie') {
     // BRAIN
-    const r = CELL * .40 * (1 + .07 * Math.sin(t / 240));
+    const r = CELL * .40 * Math.sqrt(CHAR_BOOST) * (1 + .07 * Math.sin(t / 240));
     ctx.save();
     ctx.globalAlpha = alpha;
     // soft halo (was canvas shadowBlur — slow on phones); gradient approximates
@@ -2192,7 +2204,7 @@ function drawPickup(t) {
     ctx.restore();
   } else {
     // MEDKIT
-    const s = CELL * .37 * (1 + .06 * Math.sin(t / 240));
+    const s = CELL * .37 * Math.sqrt(CHAR_BOOST) * (1 + .06 * Math.sin(t / 240));
     ctx.save();
     ctx.globalAlpha = alpha;
     // soft halo (was canvas shadowBlur — slow on phones)
@@ -2287,7 +2299,7 @@ function drawSnake(t) {
   // chain base — a soft rope under the characters so the line reads as a chain
   if (n > 1) {
     ctx.strokeStyle = role === 'human' ? 'rgba(163,241,96,.14)' : 'rgba(143,174,122,.16)';
-    ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.lineWidth = 5 * Math.min(CHAR_BOOST, 1.25); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
     for (let i = 1; i < n; i++) ctx.lineTo(pts[i].x, pts[i].y);
     ctx.stroke();
@@ -2309,7 +2321,7 @@ function drawSnake(t) {
     const o = {
       fx, fy,
       eyes: isHead ? (frenzy ? 'frenzy' : (role === 'human' ? 'leader' : 'red')) : 'normal',
-      scale: isHead ? 1.16 : 1,
+      scale: isHead ? 1.16 * Math.min(CHAR_BOOST, 1.25) : 1,
     };
     if (role === 'human') drawHumanChar(p.x, p.y, t, c, o);
     else drawZombieChar(p.x, p.y, t, c, o);
@@ -2319,7 +2331,7 @@ function drawSnake(t) {
   const h = pts[0];
   ctx.strokeStyle = role === 'human' ? 'rgba(163,241,96,.35)' : 'rgba(143,174,122,.4)';
   ctx.lineWidth = 1.4;
-  ctx.beginPath(); ctx.arc(h.x, h.y, 14, 0, 7); ctx.stroke();
+  ctx.beginPath(); ctx.arc(h.x, h.y, 14 * Math.min(CHAR_BOOST, 1.2), 0, 7); ctx.stroke();
   // blood-ring after a fresh kill
   if (t < headFlashUntil) {
     const fp = 1 - (headFlashUntil - t) / 260;

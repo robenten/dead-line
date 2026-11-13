@@ -812,7 +812,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.13.5'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.13.6'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 const Z_BREED = {
@@ -2322,7 +2322,7 @@ function drawSnake(t) {
     const o = {
       fx, fy,
       eyes: isHead ? (frenzy ? 'frenzy' : (role === 'human' ? 'leader' : 'red')) : 'normal',
-      scale: isHead ? 1.16 * Math.min(CHAR_BOOST, 1.25) : 1,
+      scale: 1, // uniform line — head no longer oversized
     };
     if (role === 'human') drawHumanChar(p.x, p.y, t, c, o);
     else drawZombieChar(p.x, p.y, t, c, o);

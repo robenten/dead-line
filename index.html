@@ -196,6 +196,14 @@
     75%{ opacity:1; }
     100%{ opacity:0; transform:translate(-50%,-62%) scale(1); }
   }
+  /* subtle variant for the one-time audio-armed confirmation */
+  .toast.quick{ font-size:10px; letter-spacing:.24em; animation:toast-quick .8s ease forwards; }
+  @keyframes toast-quick{
+    0%{ opacity:0; transform:translate(-50%,-46%); }
+    15%{ opacity:.85; transform:translate(-50%,-50%); }
+    75%{ opacity:.85; transform:translate(-50%,-52%); }
+    100%{ opacity:0; transform:translate(-50%,-56%); }
+  }
 
   /* rush / frenzy meter — visible while the buff lasts */
   .frenzy{
@@ -387,7 +395,7 @@
   /* ── mute toggle — same seat as the pause button ── */
   #btn-mute .ic-off{ display:none; }
   #btn-mute.is-muted .ic-on{ display:none; }
-  #btn-mute.is-muted .ic-off{ display:block; }
+  #btn-mute.is-muted .ic-off{ display:block; color:var(--danger); }
   #btn-mute.is-muted{ color:var(--muted); }
 
   /* ── footer hints ───────────────────────────────────── */
@@ -763,7 +771,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.12'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.13'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 const Z_BREED = {
@@ -830,18 +838,43 @@ const SND = (() => {
   let ctx = null, master = null, noiseBuf = null, drone = null, muted = false;
 
   // AudioContext is only ever created inside a user gesture (see the
-  // capture-phase unlock listeners at the bottom). Everything else is
-  // guarded so audio can never throw into the game loop.
-  function unlock(){
-    if (ctx) { if (ctx.state === 'suspended') ctx.resume().catch(() => {}); return; }
+  // capture-phase listeners at the bottom). unlock() runs on EVERY gesture:
+  // it creates the context once, then resumes it synchronously whenever iOS
+  // has parked it (lock screen, notification, backgrounding — 'interrupted'
+  // or 'suspended'). Everything is guarded so audio can never throw into
+  // the game loop.
+  let readyFired = false, readyCb = null;
+
+  function onState(){                       // iOS interruption / recovery
+    if (!ctx || ctx.state !== 'running') return;
+    fireReady();
+  }
+
+  function fireReady(){                     // first suspended→running, once ever
+    if (readyFired) return;
+    readyFired = true;
+    if (muted) return;                      // no "Sound on" while the player muted us
     try {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return;
-      ctx = new AC();
-      master = ctx.createGain();
-      master.gain.value = muted ? 0 : .9;
-      master.connect(ctx.destination);
-    } catch { ctx = null; }
+      note('sine', 880, 0, 0, .07, .04);    // soft two-note "armed" blip
+      note('sine', 1320, 0, .05, .06, .03);
+    } catch {}
+    if (readyCb) try { readyCb(); } catch {}
+  }
+
+  function unlock(){
+    try {
+      if (!ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        ctx = new AC();
+        master = ctx.createGain();
+        master.gain.value = muted ? 0 : .9;
+        master.connect(ctx.destination);
+        ctx.onstatechange = onState;
+      }
+      if (ctx.state !== 'running') ctx.resume().catch(() => {}); // synchronous, per gesture
+      else fireReady();                      // some browsers go straight to running
+    } catch {}
   }
 
   function setMuted(m){
@@ -908,21 +941,25 @@ const SND = (() => {
   } catch {} }
 
   function kill(v = 1, breed){ if (!live()) return; try {              // headbutt / kill
+    // phone speakers reproduce almost nothing below ~400Hz — every variant
+    // keeps a mid body (triangle/saw harmonics) alongside the low thump
     if (breed === 'runner') {       // lighter, higher — it goes down easy
-      note('sine', 250, 95, 0, .11, .12 * v);
-      hiss(0, .08, .05 * v, 1900, 300);
+      note('triangle', 480, 200, 0, .11, .11 * v);
+      hiss(0, .08, .05 * v, 2000, 300);
     } else if (breed === 'brute') { // a deeper, heavier collapse
-      note('sine', 105, 34, 0, .22, .16 * v);
-      hiss(0, .18, .1 * v, 800, 90);
+      note('triangle', 240, 80, 0, .22, .15 * v);
+      hiss(0, .18, .1 * v, 900, 80);
+      note('square', 150, 95, 0, .18, .05 * v, .006, 900);   // low-mid grumble
     } else {
-      note('sine', 170, 52, 0, .16, .14 * v);
-      hiss(0, .13, .09 * v, 1400, 150);
+      note('triangle', 330, 110, 0, .16, .13 * v);           // mid thump
+      hiss(0, .13, .09 * v, 1400, 150);                      // crunch
+      note('sawtooth', 480, 240, 0, .07, .045 * v, .006, 1800); // chomp bite
     }
   } catch {} }
 
   function hit(){ if (!live()) return; try {                    // brute soaks a hit
-    note('triangle', 330, 150, 0, .08, .07);
-    note('sine', 120, 58, 0, .11, .09);
+    note('triangle', 520, 180, 0, .08, .07);
+    note('square', 210, 150, 0, .1, .04, .006, 1200);
   } catch {} }
 
   function lungeWarn(){ if (!live()) return; try {              // lunger wind-up cue
@@ -931,14 +968,16 @@ const SND = (() => {
   } catch {} }
 
   function hurt(){ if (!live()) return; try {                   // a catch on the chain
-    note('square', 300, 210, 0, .1, .045, .006, 1600);
-    note('square', 150, 105, .06, .12, .05, .006, 1200);
+    note('square', 480, 330, 0, .1, .045, .006, 1900);
+    note('square', 260, 170, .06, .12, .05, .006, 1500);
   } catch {} }
 
   function wave(){ if (!live()) return; try {                    // wave horn
-    note('sawtooth', 98, 0, 0, .45, .06, .04, 520);
-    note('sawtooth', 147, 0, .02, .42, .045, .04, 520);
-    note('sawtooth', 196, 0, .04, .4, .03, .04, 520);
+    // an octave up from the original G2 chord, so the saw harmonics reach
+    // 500–900Hz — audible on a phone, still a dark graveyard horn
+    note('sawtooth', 196, 0, 0, .45, .055, .04, 900);
+    note('sawtooth', 294, 0, .02, .42, .042, .04, 900);
+    note('sawtooth', 392, 0, .04, .4, .028, .04, 900);
   } catch {} }
 
   function frenzy(){ if (!live()) return; try {                  // medkit / brain
@@ -948,9 +987,9 @@ const SND = (() => {
   } catch {} }
 
   function death(){ if (!live()) return; try {                   // run over
-    note('sawtooth', 240, 46, 0, .7, .1, .012, 900);
-    hiss(0, .5, .06, 900, 120);
-    note('sine', 90, 40, .05, .6, .1);
+    note('sawtooth', 300, 60, 0, .7, .09, .012, 1100);
+    hiss(0, .5, .06, 1200, 150);
+    note('square', 660, 330, .04, .5, .035, .012, 2200);  // audible falling wail (phones)
   } catch {} }
 
   function best(){ if (!live()) return; try {                    // new record (lands after the death fall)
@@ -965,11 +1004,14 @@ const SND = (() => {
     try {
       const t = ctx.currentTime;
       const out = ctx.createGain(); out.gain.value = 0;
-      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 240; lp.Q.value = .4;
+      // mid-register pad (A2/E3/A3 + detune): the triangle harmonics at
+      // 330–660Hz carry it on phone speakers, the low fundamentals keep it
+      // a graveyard hum on real ones. Lowpass lets the harmonics through.
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 750; lp.Q.value = .4;
       const mix = ctx.createGain(); mix.gain.value = .8;
-      const o1 = osc('triangle', 55, t);
-      const o2 = osc('triangle', 82.41, t); o2.detune.value = 7;   // a grumbly fifth
-      const o3 = osc('sine', 110, t);     o3.detune.value = -9;
+      const o1 = osc('triangle', 110, t);
+      const o2 = osc('triangle', 164.81, t); o2.detune.value = 7;   // a grumbly fifth
+      const o3 = osc('sine', 220, t);     o3.detune.value = -9;
       [o1, o2, o3].forEach(o => o.connect(mix));
       mix.connect(lp).connect(out).connect(master);
       const lfo = osc('sine', .07, t);                             // slow breathing
@@ -990,7 +1032,7 @@ const SND = (() => {
 
   function droneStop(){ if (!drone) return; try { drone.stop(); } catch {} drone = null; }
 
-  return { unlock, setMuted, ui, blip, kill, hit, hurt, lungeWarn, wave, frenzy, death, best, droneStart, droneStop };
+  return { unlock, setMuted, onReady: cb => { readyCb = cb; }, ui, blip, kill, hit, hurt, lungeWarn, wave, frenzy, death, best, droneStart, droneStop };
 })();
 
 /* ═══════════════ state ═══════════════ */
@@ -1649,9 +1691,10 @@ function updateHud() {
 }
 function popScore() { scoreEl.classList.remove('pop'); void scoreEl.offsetWidth; scoreEl.classList.add('pop'); }
 
-function showToast(text, pink) {
+function showToast(text, pink, quick) {
   toastEl.textContent = text;
   toastEl.classList.toggle('pink', !!pink);
+  toastEl.classList.toggle('quick', !!quick);
   toastEl.classList.remove('go'); void toastEl.offsetWidth; toastEl.classList.add('go');
 }
 
@@ -2327,14 +2370,19 @@ setRoleFocus('human');
 show(ovRole);
 syncMuteBtn();
 SND.setMuted(muted);   // applies to the context once a gesture unlocks it
+SND.onReady(() => {    // one-time "audio armed" confirmation (suspended→running)
+  showToast('SOUND ON', false, true);
+  if (state === 'playing') SND.droneStart();   // game began before audio unlocked
+});
 document.querySelectorAll('.build-tag').forEach(el => el.textContent = BUILD);
 requestAnimationFrame(frame);
 
-// unlock audio on the first gesture — capture phase so the context exists
-// before any game handler (which may want to play a sound) runs
+// unlock audio on every gesture — capture phase so the context exists
+// before any game handler (which may want to play a sound) runs; passive
+// so we never block scrolling
 const unlockAudio = () => SND.unlock();
 window.addEventListener('keydown', unlockAudio, { capture: true });
-window.addEventListener('pointerdown', unlockAudio, { capture: true });
+window.addEventListener('pointerdown', unlockAudio, { capture: true, passive: true });
 window.addEventListener('touchstart', unlockAudio, { capture: true, passive: true });
 
 })();

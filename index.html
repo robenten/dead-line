@@ -145,6 +145,14 @@
     border-bottom:1px solid var(--line);
   }
   .hud-right{ margin-left:auto; display:flex; align-items:center; gap:14px; }
+  /* phones: the HUD must fit the board width — compact stats, and the Best
+     stat moves to the game-over card so the buttons never crowd the edge */
+  @media (pointer:coarse){
+    .hud{ gap:8px; }
+    .stat{ gap:6px; }
+    .hud-right{ gap:16px; }
+  }
+  @media (pointer:coarse) and (max-width:480px){ .hud-right .stat{ display:none; } }
   .stat{ display:flex; align-items:baseline; gap:8px; }
   .label{
     font:600 9.5px/1 var(--mono);
@@ -182,6 +190,7 @@
   }
   .toast.pink{ color:var(--brain); text-shadow:0 0 24px rgba(255,158,199,.6), 0 2px 10px rgba(0,0,0,.7); }
   .toast.go{ animation:toast 1.9s ease forwards; }
+  .toast.warn{ color:var(--danger); text-shadow:0 0 24px rgba(229,72,77,.55), 0 2px 10px rgba(0,0,0,.7); }
 
   /* build badge — ground truth for "am I on the latest?" (page is cached ~10 min).
      absolute + pointer-events:none, so it never affects layout, hits, or the phone fits */
@@ -203,6 +212,18 @@
     15%{ opacity:.85; transform:translate(-50%,-50%); }
     75%{ opacity:.85; transform:translate(-50%,-52%); }
     100%{ opacity:0; transform:translate(-50%,-56%); }
+  }
+  /* warning variant shown at boot when the game starts muted — wraps, lasts ~3s */
+  .toast.slow{
+    font-size:11px; letter-spacing:.22em; text-indent:.22em; line-height:1.9;
+    white-space:normal; max-width:80%; text-align:center;
+    animation:toast-slow 3.2s ease forwards;
+  }
+  @keyframes toast-slow{
+    0%{ opacity:0; transform:translate(-50%,-44%) scale(.94); }
+    5%{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+    88%{ opacity:1; }
+    100%{ opacity:0; transform:translate(-50%,-56%) scale(1); }
   }
 
   /* rush / frenzy meter — visible while the buff lasts */
@@ -398,6 +419,11 @@
   #btn-mute.is-muted .ic-off{ display:block; color:var(--danger); }
   #btn-mute.is-muted{ color:var(--muted); }
 
+  /* generous hit areas (≥40px on touch) without visually bloating the HUD —
+     mis-taps on the mute/pause pair kept silencing the game by accident */
+  #btn-mute, #btn-pause{ position:relative; }
+  #btn-mute::after, #btn-pause::after{ content:''; position:absolute; inset:-4px; }
+
   /* ── footer hints ───────────────────────────────────── */
   .hints{
     display:flex; align-items:center; flex-wrap:wrap; justify-content:center;
@@ -505,7 +531,7 @@
     .kicker{ display:none; }
     .title{ font-size:14px; letter-spacing:.14em; text-indent:.14em; }
     .hints{ display:none; }
-    .hud{ gap:12px; padding:6px 10px; }
+    .hud{ gap:6px; padding:6px 8px; }
     .label{ font-size:8px; letter-spacing:.14em; }
     .stat{ gap:5px; }
     .value{ font-size:12px; }
@@ -519,6 +545,8 @@
   /* touch + landscape: every pixel goes to the board */
   @media (max-height:540px) and (pointer:coarse){
     .masthead{ display:none; }
+    .hud-right .stat{ display:none; } /* best lives on the game-over card */
+    #stat-kills{ display:none; }   /* kills too — compact hud, board gets the space */
     .overlay{ gap:8px; padding:12px; }
     .ov-title{ font-size:18px; }
     .ov-text{ font-size:12px; }
@@ -550,7 +578,7 @@
     <div class="hud">
       <div class="stat"><span class="label">Score</span><span class="value" id="score">0000</span></div>
       <div class="stat"><span class="label">Wave</span><span class="value" id="wave">1</span></div>
-      <div class="stat"><span class="label">Kills</span><span class="value" id="kills">00</span></div>
+      <div class="stat" id="stat-kills"><span class="label">Kills</span><span class="value" id="kills">00</span></div>
       <div class="hud-right">
         <div class="stat"><span class="label">Best</span><span class="value" id="best">0000</span></div>
         <button class="icon-btn" id="btn-mute" aria-label="Mute sound" aria-pressed="false">
@@ -771,7 +799,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.13.2'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.13.3'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 const Z_BREED = {
@@ -1193,6 +1221,7 @@ function startGame(d) {
   state = 'playing';
   hideOverlays();
   syncPauseBtn();
+  if (muted) showToast('SOUND OFF', { warn: true, quick: true }); // brief reminder while starting muted
   SND.ui();
   SND.droneStart();
 }
@@ -1293,7 +1322,7 @@ function eatPickup() {
   SND.frenzy();
   nextPickupAt = gt + 15000 + Math.random() * 6000;
   burst((snake[0].x + .5) * CELL, (snake[0].y + .5) * CELL, role === 'human' ? MED_P : BRAIN_P, 16);
-  showToast(role === 'human' ? 'ADRENALINE!' : 'FRENZY!', role !== 'human');
+  showToast(role === 'human' ? 'ADRENALINE!' : 'FRENZY!', { pink: role !== 'human' });
   updateHud();
 }
 
@@ -1713,10 +1742,12 @@ function updateHud() {
 }
 function popScore() { scoreEl.classList.remove('pop'); void scoreEl.offsetWidth; scoreEl.classList.add('pop'); }
 
-function showToast(text, pink, quick) {
+function showToast(text, opts = {}) {
   toastEl.textContent = text;
-  toastEl.classList.toggle('pink', !!pink);
-  toastEl.classList.toggle('quick', !!quick);
+  toastEl.classList.toggle('pink', !!opts.pink);
+  toastEl.classList.toggle('quick', !!opts.quick);
+  toastEl.classList.toggle('warn', !!opts.warn);
+  toastEl.classList.toggle('slow', !!opts.slow);
   toastEl.classList.remove('go'); void toastEl.offsetWidth; toastEl.classList.add('go');
 }
 
@@ -1809,6 +1840,7 @@ btnMute.addEventListener('click', e => {
   try { localStorage.setItem('svz-muted', muted ? '1' : '0'); } catch {}
   SND.setMuted(muted);
   syncMuteBtn();
+  showToast(muted ? 'SOUND OFF' : 'SOUND ON', { quick: true, warn: muted }); // symmetric feedback — a stray tap explains itself
   if (!muted && state === 'playing') SND.droneStart(); // bring the drone back
 });
 ovStart.addEventListener('click', () => startGame());
@@ -2392,8 +2424,9 @@ setRoleFocus('human');
 show(ovRole);
 syncMuteBtn();
 SND.setMuted(muted);   // applies to the context once a gesture unlocks it
+if (muted) showToast('Sound off — tap the speaker icon to enable', { warn: true, slow: true }); // discoverability: silent boots explain themselves
 SND.onReady(() => {    // one-time "audio armed" confirmation (suspended→running)
-  showToast('SOUND ON', false, true);
+  showToast('SOUND ON', { quick: true });
   if (state === 'playing') SND.droneStart();   // game began before audio unlocked
 });
 document.querySelectorAll('.build-tag').forEach(el => el.textContent = BUILD);

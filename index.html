@@ -42,7 +42,7 @@
     · Brains trigger a frenzy: the living scatter and slow down.
   Shared: waves escalate every 25 seconds; walls and self-collision
   kill; best scores are kept per role in localStorage
-  ("svz-best-human" / "svz-best-zombie"; legacy "svz-best" migrates).
+  ("svz-best-human"; legacy "svz-best" migrates; a stale "svz-best-zombie" is ignored — human-only).
   ─────────────────────────────────────────────────────────────
 -->
 <style>
@@ -522,7 +522,6 @@
   /* narrow phones: trim the ready screen until it fits the small board.
      (change-role stays available on the game-over card) */
   @media (pointer:coarse) and (max-width:480px){
-    #btn-role-1{ display:none; }
     .ov-text{ display:none; } /* flavor line — traded for safety margin on the smallest boards */
     .overlay{ gap:7px; padding:12px; }
     .legend li{ font-size:11.5px; line-height:1.25; }
@@ -626,60 +625,9 @@
       <div class="frenzy" id="frenzy"><span id="frenzy-label">Frenzy</span><div class="frenzy-track"><i class="frenzy-fill" id="frenzy-fill"></i></div></div>
 
       <!-- role select -->
-      <div class="overlay" id="ov-role">
-        <p class="ov-kicker" data-t="kicker">Choose your side</p>
-        <div class="roles">
-          <button class="role-card human" id="card-human">
-            <svg width="42" height="42" viewBox="0 0 48 48" aria-hidden="true">
-              <circle cx="24" cy="17" r="9" fill="#e8c39e"/>
-              <path d="M15 15a9 9 0 0 1 18 0" fill="#2f3a30"/>
-              <circle cx="21" cy="18" r="1.4" fill="#20342a"/>
-              <circle cx="27" cy="18" r="1.4" fill="#20342a"/>
-              <rect x="15" y="26" width="18" height="13" rx="5" fill="#5a7d8c"/>
-              <path d="M15 31l-7 6" stroke="#e8c39e" stroke-width="3" stroke-linecap="round"/>
-              <path d="M33 30l7-6" stroke="#8d5a3b" stroke-width="3" stroke-linecap="round"/>
-              <path d="M20 40v5M28 40v5" stroke="#333d38" stroke-width="3" stroke-linecap="round"/>
-            </svg>
-            <span class="role-name" data-t="roleHuman">Human</span>
-            <span class="role-tag" data-t="tagHuman">Outnumbered,<br>not outgunned</span>
-            <span class="role-best"><span data-t="best">Best</span> <b id="best-human">0000</b></span>
-            <span class="role-key"><kbd>1</kbd></span>
-          </button>
-          <button class="role-card zombie" id="card-zombie">
-            <svg width="42" height="42" viewBox="0 0 48 48" aria-hidden="true">
-              <circle cx="24" cy="17" r="9" fill="#8fae7a"/>
-              <path d="M15 15a9 9 0 0 1 18 0" fill="#2f3a30"/>
-              <circle cx="20.5" cy="18" r="1.5" fill="#ff5f56"/>
-              <circle cx="27.5" cy="18" r="1.5" fill="#ff5f56"/>
-              <path d="M20 24h8" stroke="#1c261d" stroke-width="1.6" stroke-linecap="round"/>
-              <rect x="14" y="26" width="20" height="12" rx="5" fill="#4a5a48"/>
-              <path d="M14 30l-8 2" stroke="#8fae7a" stroke-width="3" stroke-linecap="round"/>
-              <path d="M34 30l8-2" stroke="#8fae7a" stroke-width="3" stroke-linecap="round"/>
-              <path d="M20 38v5M28 38v5" stroke="#39443a" stroke-width="3" stroke-linecap="round"/>
-            </svg>
-            <span class="role-name" data-t="roleZombie">Zombie</span>
-            <span class="role-tag" data-t="tagZombie">The horde<br>is hungry</span>
-            <span class="role-best"><span data-t="best">Best</span> <b id="best-zombie">0000</b></span>
-            <span class="role-key"><kbd>2</kbd></span>
-          </button>
-        </div>
-        <p class="ov-hint key-only" data-t="roleHintKeys">press <kbd>1</kbd> or <kbd>2</kbd> · arrows + <kbd>Enter</kbd></p>
-        <p class="ov-hint touch-only" data-t="roleHintTouch">tap your side</p>
-        <select class="lang-pick" id="lang-pick" aria-label="Language">
-          <option value="en">English</option>
-          <option value="ja">日本語</option>
-          <option value="zh-hans">简体中文</option>
-          <option value="zh-hant">繁體中文</option>
-          <option value="es">Español</option>
-          <option value="fr">Français</option>
-          <option value="de">Deutsch</option>
-          <option value="ko">한국어</option>
-        </select>
-        <span class="build-tag" id="build-role"></span>
-      </div>
-
-      <!-- ready screen (after picking a role) -->
+      <!-- start screen (human-only — there is one side: yours) -->
       <div class="overlay" id="ov-start">
+        <p class="ov-kicker" data-t="tagline">graveyard shift</p>
         <svg width="46" height="46" viewBox="0 0 48 48" fill="none" aria-hidden="true">
           <circle cx="42" cy="7" r="3.6" fill="#dfe8f4" opacity=".9"/>
           <path d="M8 44V22c0-7 5.5-12 12-12s12 5 12 12v22" fill="#2b3833" stroke="#3d4a44" stroke-width="1.5"/>
@@ -695,7 +643,17 @@
           <svg width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><path d="M0 0 10 6 0 12Z" fill="currentColor"/></svg>
           <span id="btn-start-label">Begin the run</span>
         </button>
-        <button class="link-btn" id="btn-role-1" data-t="changeRole">change role</button>
+        <select class="lang-pick" id="lang-pick" aria-label="Language">
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="zh-hans">简体中文</option>
+          <option value="zh-hant">繁體中文</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="de">Deutsch</option>
+          <option value="ko">한국어</option>
+        </select>
+        <span class="build-tag" id="build-role"></span>
         <p class="ov-hint pulse key-only" data-t="readyHintKeys">press any key to begin</p>
         <p class="ov-hint pulse touch-only" data-t="readyHintTouch">tap to begin · swipe to steer</p>
       </div>
@@ -728,9 +686,8 @@
           </svg>
           <span data-t="restart">Run it back</span>
         </button>
-        <button class="link-btn" id="btn-role-2" data-t="changeRole">change role</button>
-        <p class="ov-hint key-only" data-t="overHintKeys">press <kbd>R</kbd> to replay · <kbd>C</kbd> to change role</p>
-        <p class="ov-hint touch-only" data-t="overHintTouch">tap to replay · or change role below</p>
+        <p class="ov-hint key-only" data-t="overHintKeys">press <kbd>R</kbd> to replay</p>
+        <p class="ov-hint touch-only" data-t="overHintTouch">tap to replay</p>
       </div>
     </div>
   </section>
@@ -746,7 +703,6 @@
     <span class="sep"></span>
     <span><kbd>R</kbd> <span data-t="hintReplay">replay</span></span>
     <span class="sep"></span>
-    <span><kbd>C</kbd> <span data-t="hintRole">role</span></span>
   </footer>
 </main>
 
@@ -761,14 +717,12 @@ const ctx    = canvas.getContext('2d');
 const $      = id => document.getElementById(id);
 const scoreEl = $('score'), waveEl = $('wave'), killsEl = $('kills'), bestEl = $('best');
 const frameEl = $('frame');
-const ovRole  = $('ov-role'), ovStart = $('ov-start'), ovPause = $('ov-pause'), ovOver = $('ov-over');
+const ovStart = $('ov-start'), ovPause = $('ov-pause'), ovOver = $('ov-over');
 const overTitle = $('over-title'), finalScore = $('final-score'),
       overStats = $('over-stats'), overBest = $('over-best'), pillBest = $('pill-best');
 const btnPause  = $('btn-pause');
 const btnMute   = $('btn-mute');
 const toastEl   = $('toast'), frenzyEl = $('frenzy'), frenzyFill = $('frenzy-fill'), frenzyLabel = $('frenzy-label');
-const cardHuman = $('card-human'), cardZombie = $('card-zombie');
-const bestHumanEl = $('best-human'), bestZombieEl = $('best-zombie');
 const readyTitle = $('ready-title'), readyText = $('ready-text'),
       legendEl = $('legend'), btnStartLabel = $('btn-start-label');
 
@@ -777,34 +731,35 @@ const readyTitle = $('ready-title'), readyText = $('ready-text'),
 const I18N = {
   en: {
     docTitle: 'DEAD LINE — graveyard shift',
+    tagline: 'graveyard shift',
     meta: 'DEAD LINE — a graveyard-shift snake game. Recruit the living, dodge the horde, turn the tables with a medkit.',
-    kicker: 'Choose your side', roleHuman: 'Human', roleZombie: 'Zombie',
-    tagHuman: 'Outnumbered,<br>not outgunned', tagZombie: 'The horde<br>is hungry',
-    best: 'Best',
-    roleHintKeys: 'press <kbd>1</kbd> or <kbd>2</kbd> · arrows + <kbd>Enter</kbd>',
-    roleHintTouch: 'tap your side',
-    readyH: 'Survive.', readyZ: 'Convert.',
+    roleHuman: 'Human', 
+    tagHuman: 'Outnumbered,<br>not outgunned', 
+    
+    
+    
+    readyH: 'Survive.', 
     readyTextH: 'Gather the living. Guard the line.',
-    readyTextZ: 'The living are skittish — herd them with your tail.',
-    startH: 'Begin the run', startZ: 'Begin the hunt', changeRole: 'change role',
+    
+    startH: 'Begin the run', 
     readyHintKeys: 'press any key to begin', readyHintTouch: 'tap to begin · swipe to steer',
     paused: 'Paused',
     pauseHintKeys: 'press <kbd>P</kbd> or <kbd>Space</kbd> — or click — to resume',
     pauseHintTouch: 'tap anywhere to resume',
     finalScore: 'Final score', statsOne: '1 kill · wave {w}', statsMany: '{k} kills · wave {w}',
     overBest: 'Best {v}', newBest: 'New best', restart: 'Run it back',
-    overHintKeys: 'press <kbd>R</kbd> to replay · <kbd>C</kbd> to change role',
-    overHintTouch: 'tap to replay · or change role below',
+    overHintKeys: 'press <kbd>R</kbd> to replay',
+    overHintTouch: 'tap to replay',
     deathWall: 'Splat.', deathSelf: 'Tangled.', deathHeadH: 'Devoured.', deathPickedH: 'Picked clean.',
-    deathHeadZ: 'Overwhelmed.', deathPickedZ: 'Scattered.', gameOver: 'Game over',
+    gameOver: 'Game over',
     hudScore: 'Score', hudWave: 'Wave', hudKills: 'Kills', hudBest: 'Best',
-    frenzyH: 'Rush', frenzyZ: 'Frenzy',
-    toastWave: 'WAVE {n}', powerH: 'DEVOUR THEM!', powerZ: 'FRENZY!',
+    frenzyH: 'Rush', 
+    toastWave: 'WAVE {n}', powerH: 'DEVOUR THEM!', 
     soundOn: 'SOUND ON', soundOff: 'SOUND OFF',
     mutedBoot: 'Sound off — tap the speaker icon to enable',
     ariaMute: 'Mute sound', ariaUnmute: 'Unmute sound', ariaPause: 'Pause game', ariaResume: 'Resume game',
     ariaFrame: 'Dead Line game', ariaBoard: 'Dead Line board', ariaLang: 'Language',
-    hintSwipe: 'swipe anywhere to steer', or: 'or', hintPause: 'pause', hintReplay: 'replay', hintRole: 'role',
+    hintSwipe: 'swipe anywhere to steer', or: 'or', hintPause: 'pause', hintReplay: 'replay', 
     lg1: "Touch wandering humans to recruit them — that's how you grow",
     lg2: 'Fighters cut down zombies that catch the chain near them',
     lg3: 'Hunters snipe the nearest zombie, on a cooldown',
@@ -812,40 +767,41 @@ const I18N = {
     lg5: 'Touch a zombie unpowered and it devours your leader — medkits turn the tables',
     lg6: 'Runners are quick; Brutes need three hits and bite deep',
     lg7: 'Lungers flash red, then dash — step out of the way',
-    z1: "Touch humans unpowered and you're overwhelmed — recruit wanderers to grow",
-    z2: 'Brains power you up — touch-kill the fleeing living to grow',
-    z3: 'Humans wrestle free — guard your tail',
+    
+    
+    
   },
   ja: {
     docTitle: 'DEAD LINE — 墓場の夜番',
+    tagline: '墓場の夜番',
     meta: 'DEAD LINE — 墓場で繰り広げるスネーク。生存者を仲間に、屍の群れを避け、救急箱で形勢逆転。',
-    kicker: '陣営を選べ', roleHuman: '人類', roleZombie: 'ゾンビ',
-    tagHuman: '数で勝てなくても<br>火力で勝つ', tagZombie: '腹を空かせた<br>屍の群れ',
-    best: '最高',
-    roleHintKeys: '<kbd>1</kbd> か <kbd>2</kbd> · 方向キー + <kbd>Enter</kbd>',
-    roleHintTouch: '陣営をタップ',
-    readyH: '生き延びろ。', readyZ: '感染させろ。',
+    roleHuman: '人類', 
+    tagHuman: '数で勝てなくても<br>火力で勝つ', 
+    
+    
+    
+    readyH: '生き延びろ。', 
     readyTextH: '生存者を集め、隊列を守れ。',
-    readyTextZ: '生者は臆病だ — 尾で追い込め。',
-    startH: '撤退を開始', startZ: '捕食を開始', changeRole: '陣営を変更',
+    
+    startH: '撤退を開始', 
     readyHintKeys: 'どれかのキーで開始', readyHintTouch: 'タップで開始 · スワイプで操る',
     paused: '一時停止',
     pauseHintKeys: '<kbd>P</kbd> か <kbd>Space</kbd> — クリックでも再開',
     pauseHintTouch: 'どこでもタップで再開',
     finalScore: '最終スコア', statsOne: '撃破 1 · 第{w}波', statsMany: '撃破 {k} · 第{w}波',
     overBest: '最高 {v}', newBest: '新記録！', restart: 'もう一回',
-    overHintKeys: '<kbd>R</kbd> で再挑戦 · <kbd>C</kbd> で陣営変更',
-    overHintTouch: 'タップで再挑戦 · 下から陣営変更',
+    overHintKeys: '<kbd>R</kbd> で再挑戦',
+    overHintTouch: 'タップで再挑戦',
     deathWall: '潰れた。', deathSelf: '絡まった。', deathHeadH: '食い殺された。', deathPickedH: '食い尽くされた。',
-    deathHeadZ: '制圧された。', deathPickedZ: '散った。', gameOver: 'ゲームオーバー',
+    gameOver: 'ゲームオーバー',
     hudScore: 'スコア', hudWave: '波', hudKills: '撃破', hudBest: '最高',
-    frenzyH: '突撃', frenzyZ: '狂乱',
-    toastWave: '第{n}波', powerH: '食らい尽くせ！', powerZ: '狂乱！',
+    frenzyH: '突撃', 
+    toastWave: '第{n}波', powerH: '食らい尽くせ！', 
     soundOn: 'サウンド オン', soundOff: 'サウンド オフ',
     mutedBoot: '消音中 — スピーカーアイコンで戻せます',
     ariaMute: 'ミュート', ariaUnmute: 'ミュート解除', ariaPause: '一時停止', ariaResume: '再開',
     ariaFrame: 'Dead Line ゲーム', ariaBoard: 'Dead Line 盤面', ariaLang: '言語',
-    hintSwipe: 'スワイプで操る', or: 'または', hintPause: '停止', hintReplay: '再挑戦', hintRole: '陣営',
+    hintSwipe: 'スワイプで操る', or: 'または', hintPause: '停止', hintReplay: '再挑戦', 
     lg1: 'さまよう人間に触れて仲間に — それが成長の道',
     lg2: 'ファイターは隊列に迫るゾンビを切り捨てる',
     lg3: 'ハンターは最寄りのゾンビを狙撃（クールダウン制）',
@@ -853,40 +809,41 @@ const I18N = {
     lg5: '無強化でゾンビに触れるとリーダーが食われる — 救急箱で逆転',
     lg6: 'ランナーは速い。ブルートは3発必要で噛みも深い',
     lg7: 'ランジャーは赤く光ってから突進 — 脇に避けろ',
-    z1: '無強化で人間に触れると制圧される — さまよう者を仲間に',
-    z2: '脳で強化 — 逃げる生者に触れて狩れ',
-    z3: '人間は抵抗する — 尾を守れ',
+    
+    
+    
   },
   'zh-hans': {
     docTitle: 'DEAD LINE — 墓园夜班',
+    tagline: '墓园夜班',
     meta: 'DEAD LINE — 一场墓园夜班的贪吃蛇。招募幸存者，躲开尸群，靠医疗包扭转局势。',
-    kicker: '选择你的阵营', roleHuman: '人类', roleZombie: '丧尸',
-    tagHuman: '寡不敌众，<br>火力不输', tagZombie: '饥饿的<br>尸群',
-    best: '最高',
-    roleHintKeys: '按 <kbd>1</kbd> 或 <kbd>2</kbd> · 方向键 + <kbd>Enter</kbd>',
-    roleHintTouch: '点击你的阵营',
-    readyH: '活下去。', readyZ: '扩散吧。',
+    roleHuman: '人类', 
+    tagHuman: '寡不敌众，<br>火力不输', 
+    
+    
+    
+    readyH: '活下去。', 
     readyTextH: '集结幸存者，守住队伍。',
-    readyTextZ: '活人胆小——用尾巴把他们赶拢。',
-    startH: '开始撤离', startZ: '开始狩猎', changeRole: '更换阵营',
+    
+    startH: '开始撤离', 
     readyHintKeys: '按任意键开始', readyHintTouch: '点击开始 · 滑动转向',
     paused: '暂停',
     pauseHintKeys: '按 <kbd>P</kbd> 或 <kbd>空格</kbd>——或点击——继续',
     pauseHintTouch: '点击任意处继续',
     finalScore: '最终得分', statsOne: '击杀 1 · 第{w}波', statsMany: '击杀 {k} · 第{w}波',
     overBest: '最高 {v}', newBest: '新纪录！', restart: '再来一局',
-    overHintKeys: '按 <kbd>R</kbd> 重开 · <kbd>C</kbd> 换阵营',
-    overHintTouch: '点击重开 · 或在下方换阵营',
+    overHintKeys: '按 <kbd>R</kbd> 重开',
+    overHintTouch: '点击重开',
     deathWall: '拍扁了。', deathSelf: '缠死了。', deathHeadH: '被吞噬了。', deathPickedH: '被啃光了。',
-    deathHeadZ: '被击溃了。', deathPickedZ: '溃散了。', gameOver: '游戏结束',
+    gameOver: '游戏结束',
     hudScore: '得分', hudWave: '波次', hudKills: '击杀', hudBest: '最高',
-    frenzyH: '狂奔', frenzyZ: '狂暴',
-    toastWave: '第{n}波', powerH: '吃光它们！', powerZ: '狂暴！',
+    frenzyH: '狂奔', 
+    toastWave: '第{n}波', powerH: '吃光它们！', 
     soundOn: '声音开启', soundOff: '声音关闭',
     mutedBoot: '已静音——点击扬声器图标开启',
     ariaMute: '静音', ariaUnmute: '取消静音', ariaPause: '暂停', ariaResume: '继续',
     ariaFrame: 'Dead Line 游戏', ariaBoard: 'Dead Line 棋盘', ariaLang: '语言',
-    hintSwipe: '滑动转向', or: '或', hintPause: '暂停', hintReplay: '重开', hintRole: '阵营',
+    hintSwipe: '滑动转向', or: '或', hintPause: '暂停', hintReplay: '重开', 
     lg1: '接触游荡的人类即可招募——这是成长的方式',
     lg2: '战士会砍翻咬住队伍附近丧尸',
     lg3: '猎人冷却完毕就狙杀最近的丧尸',
@@ -894,40 +851,41 @@ const I18N = {
     lg5: '无强化时碰到丧尸，队长会被吞掉——医疗包能扭转局势',
     lg6: '疾行者跑得快；蛮击者要打三下，咬人也狠',
     lg7: '突袭者会闪红光再猛冲——快躲开',
-    z1: '无强化时碰到人类会被击溃——招募游荡者来成长',
-    z2: '脑子能强化你——追猎逃跑的活人来成长',
-    z3: '人类会挣脱——看好你的尾巴',
+    
+    
+    
   },
   'zh-hant': {
     docTitle: 'DEAD LINE — 墓園夜班',
+    tagline: '墓園夜班',
     meta: 'DEAD LINE — 一場墓園夜班的貪吃蛇。招募倖存者，閃避屍群，靠急救箱扭轉局勢。',
-    kicker: '選擇你的陣營', roleHuman: '人類', roleZombie: '殭屍',
-    tagHuman: '寡不敵眾，<br>火力不輸', tagZombie: '飢餓的<br>屍群',
-    best: '最高',
-    roleHintKeys: '按 <kbd>1</kbd> 或 <kbd>2</kbd> · 方向鍵 + <kbd>Enter</kbd>',
-    roleHintTouch: '點擊你的陣營',
-    readyH: '活下去。', readyZ: '擴散吧。',
+    roleHuman: '人類', 
+    tagHuman: '寡不敵眾，<br>火力不輸', 
+    
+    
+    
+    readyH: '活下去。', 
     readyTextH: '集結倖存者，守住隊伍。',
-    readyTextZ: '活人膽小——用尾巴把他們趕攏。',
-    startH: '開始撤離', startZ: '開始狩獵', changeRole: '更換陣營',
+    
+    startH: '開始撤離', 
     readyHintKeys: '按任意鍵開始', readyHintTouch: '點擊開始 · 滑動轉向',
     paused: '暫停',
     pauseHintKeys: '按 <kbd>P</kbd> 或 <kbd>空白鍵</kbd>——或點擊——繼續',
     pauseHintTouch: '點擊任意處繼續',
     finalScore: '最終得分', statsOne: '擊殺 1 · 第{w}波', statsMany: '擊殺 {k} · 第{w}波',
     overBest: '最高 {v}', newBest: '新紀錄！', restart: '再來一局',
-    overHintKeys: '按 <kbd>R</kbd> 重開 · <kbd>C</kbd> 換陣營',
-    overHintTouch: '點擊重開 · 或在下方換陣營',
+    overHintKeys: '按 <kbd>R</kbd> 重開',
+    overHintTouch: '點擊重開',
     deathWall: '壓扁了。', deathSelf: '纏死了。', deathHeadH: '被吞噬了。', deathPickedH: '被啃光了。',
-    deathHeadZ: '被擊潰了。', deathPickedZ: '潰散了。', gameOver: '遊戲結束',
+    gameOver: '遊戲結束',
     hudScore: '得分', hudWave: '波次', hudKills: '擊殺', hudBest: '最高',
-    frenzyH: '狂奔', frenzyZ: '狂暴',
-    toastWave: '第{n}波', powerH: '吃光它們！', powerZ: '狂暴！',
+    frenzyH: '狂奔', 
+    toastWave: '第{n}波', powerH: '吃光它們！', 
     soundOn: '聲音開啟', soundOff: '聲音關閉',
     mutedBoot: '已靜音——點擊喇叭圖示開啟',
     ariaMute: '靜音', ariaUnmute: '取消靜音', ariaPause: '暫停', ariaResume: '繼續',
     ariaFrame: 'Dead Line 遊戲', ariaBoard: 'Dead Line 棋盤', ariaLang: '語言',
-    hintSwipe: '滑動轉向', or: '或', hintPause: '暫停', hintReplay: '重開', hintRole: '陣營',
+    hintSwipe: '滑動轉向', or: '或', hintPause: '暫停', hintReplay: '重開', 
     lg1: '接觸遊蕩的人類即可招募——這是成長的方式',
     lg2: '鬥士會砍翻咬住隊伍附近的殭屍',
     lg3: '獵人冷卻完畢就狙殺最近的殭屍',
@@ -935,40 +893,41 @@ const I18N = {
     lg5: '無強化時碰到殭屍，隊長會被吞掉——急救箱能扭轉局勢',
     lg6: '疾行者跑得快；蠻擊者要打三下，咬人也狠',
     lg7: '突襲者會閃紅光再猛衝——快閃開',
-    z1: '無強化時碰到人類會被擊潰——招募遊蕩者來成長',
-    z2: '腦子能強化你——追獵逃跑的活人來成長',
-    z3: '人類會掙脫——看好你的尾巴',
+    
+    
+    
   },
   es: {
     docTitle: 'DEAD LINE — turno de noche',
+    tagline: 'turno de noche',
     meta: 'DEAD LINE — un snake de guardia nocturna. Recluta a los vivos, esquiva la horda y da la vuelta con un botiquín.',
-    kicker: 'Elige tu bando', roleHuman: 'Humano', roleZombie: 'Zombi',
-    tagHuman: 'En desventaja,<br>no desarmado', tagZombie: 'La horda<br>tiene hambre',
-    best: 'Récord',
-    roleHintKeys: 'pulsa <kbd>1</kbd> o <kbd>2</kbd> · flechas + <kbd>Enter</kbd>',
-    roleHintTouch: 'toca tu bando',
-    readyH: 'Sobrevive.', readyZ: 'Convierte.',
+    roleHuman: 'Humano', 
+    tagHuman: 'En desventaja,<br>no desarmado', 
+    
+    
+    
+    readyH: 'Sobrevive.', 
     readyTextH: 'Reúne a los vivos. Protege la fila.',
-    readyTextZ: 'Los vivos son esquivos: acorrálalos con la cola.',
-    startH: 'Empieza la huida', startZ: 'Empieza la caza', changeRole: 'cambiar bando',
+    
+    startH: 'Empieza la huida', 
     readyHintKeys: 'pulsa una tecla para empezar', readyHintTouch: 'toca para empezar · desliza para girar',
     paused: 'Pausa',
     pauseHintKeys: 'pulsa <kbd>P</kbd> o <kbd>Espacio</kbd> — o haz clic — para seguir',
     pauseHintTouch: 'toca en cualquier sitio para seguir',
     finalScore: 'Puntuación final', statsOne: '1 baja · oleada {w}', statsMany: '{k} bajas · oleada {w}',
     overBest: 'Récord {v}', newBest: '¡Nuevo récord!', restart: 'Otra ronda',
-    overHintKeys: 'pulsa <kbd>R</kbd> para repetir · <kbd>C</kbd> para cambiar de bando',
-    overHintTouch: 'toca para repetir · o cambia de bando abajo',
+    overHintKeys: 'pulsa <kbd>R</kbd> para repetir',
+    overHintTouch: 'toca para repetir',
     deathWall: 'Chof.', deathSelf: 'Enredado.', deathHeadH: 'Devorado.', deathPickedH: 'Desvalijado.',
-    deathHeadZ: 'Arrollado.', deathPickedZ: 'Disperso.', gameOver: 'Fin del juego',
+    gameOver: 'Fin del juego',
     hudScore: 'Puntos', hudWave: 'Oleada', hudKills: 'Bajas', hudBest: 'Récord',
-    frenzyH: 'Ímpetu', frenzyZ: 'Frenesí',
-    toastWave: 'OLEADA {n}', powerH: '¡DEVÓRALOS!', powerZ: '¡FRENESÍ!',
+    frenzyH: 'Ímpetu', 
+    toastWave: 'OLEADA {n}', powerH: '¡DEVÓRALOS!', 
     soundOn: 'SONIDO: SÍ', soundOff: 'SONIDO: NO',
     mutedBoot: 'Sonido apagado — toca el altavoz para activarlo',
     ariaMute: 'Silenciar', ariaUnmute: 'Activar sonido', ariaPause: 'Pausar', ariaResume: 'Reanudar',
     ariaFrame: 'Juego Dead Line', ariaBoard: 'Tablero Dead Line', ariaLang: 'Idioma',
-    hintSwipe: 'desliza para girar', or: 'o', hintPause: 'pausa', hintReplay: 'repetir', hintRole: 'bando',
+    hintSwipe: 'desliza para girar', or: 'o', hintPause: 'pausa', hintReplay: 'repetir', 
     lg1: 'Toca a los humanos errantes para reclutarlos: así creces',
     lg2: 'Los luchadores abaten a los zombis que alcanzan la fila cerca de ellos',
     lg3: 'Los cazadores disparan al zombi más cercano, con recarga',
@@ -976,40 +935,41 @@ const I18N = {
     lg5: 'Tocar un zombi sin poder te devora al líder — los botiquines lo cambian todo',
     lg6: 'Los corredores son rápidos; los brutos aguantan tres golpes y muerden fuerte',
     lg7: 'Los saltones destellan en rojo y embisten — quítate de en medio',
-    z1: 'Tocar humanos sin poder te arrolla — recluta errantes para crecer',
-    z2: 'Los cerebros te potencian: caza a los vivos que huyen para crecer',
-    z3: 'Los humanos se zafan — vigila tu cola',
+    
+    
+    
   },
   fr: {
     docTitle: 'DEAD LINE — garde de nuit',
+    tagline: 'garde de nuit',
     meta: 'DEAD LINE — un snake de garde nocturne. Recrute les vivants, esquive la horde, renverse la vapeur avec une trousse.',
-    kicker: 'Choisis ton camp', roleHuman: 'Humain', roleZombie: 'Zombie',
-    tagHuman: 'En infériorité,<br>pas désarmé', tagZombie: 'La horde<br>a faim',
-    best: 'Record',
-    roleHintKeys: 'appuie sur <kbd>1</kbd> ou <kbd>2</kbd> · flèches + <kbd>Entrée</kbd>',
-    roleHintTouch: 'touche ton camp',
-    readyH: 'Survis.', readyZ: 'Contamine.',
+    roleHuman: 'Humain', 
+    tagHuman: 'En infériorité,<br>pas désarmé', 
+    
+    
+    
+    readyH: 'Survis.', 
     readyTextH: 'Rassemble les vivants. Protège la file.',
-    readyTextZ: 'Les vivants sont farouches — rabats-les avec ta queue.',
-    startH: 'Lancer la ruée', startZ: 'Lancer la chasse', changeRole: 'changer de camp',
+    
+    startH: 'Lancer la ruée', 
     readyHintKeys: 'appuie sur une touche pour commencer', readyHintTouch: 'touche pour commencer · glisse pour diriger',
     paused: 'Pause',
     pauseHintKeys: 'appuie sur <kbd>P</kbd> ou <kbd>Espace</kbd> — ou clique — pour reprendre',
     pauseHintTouch: 'touche n’importe où pour reprendre',
     finalScore: 'Score final', statsOne: '1 élimination · vague {w}', statsMany: '{k} éliminations · vague {w}',
     overBest: 'Record {v}', newBest: 'Nouveau record !', restart: 'On remet ça',
-    overHintKeys: 'appuie sur <kbd>R</kbd> pour rejouer · <kbd>C</kbd> pour changer de camp',
-    overHintTouch: 'touche pour rejouer · ou change de camp ci-dessous',
+    overHintKeys: 'appuie sur <kbd>R</kbd> pour rejouer',
+    overHintTouch: 'touche pour rejouer',
     deathWall: 'Splat.', deathSelf: 'Emmêlé.', deathHeadH: 'Dévoré.', deathPickedH: 'Nettoyé.',
-    deathHeadZ: 'Submergé.', deathPickedZ: 'Dispersé.', gameOver: 'Partie terminée',
+    gameOver: 'Partie terminée',
     hudScore: 'Score', hudWave: 'Vague', hudKills: 'Élim.', hudBest: 'Record',
-    frenzyH: 'Ruée', frenzyZ: 'Frénésie',
-    toastWave: 'VAGUE {n}', powerH: 'DÉVORE-LES !', powerZ: 'FRÉNÉSIE !',
+    frenzyH: 'Ruée', 
+    toastWave: 'VAGUE {n}', powerH: 'DÉVORE-LES !', 
     soundOn: 'SON ACTIVÉ', soundOff: 'SON COUPÉ',
     mutedBoot: 'Son coupé — touche l’icône haut-parleur pour l’activer',
     ariaMute: 'Couper le son', ariaUnmute: 'Activer le son', ariaPause: 'Mettre en pause', ariaResume: 'Reprendre',
     ariaFrame: 'Jeu Dead Line', ariaBoard: 'Plateau Dead Line', ariaLang: 'Langue',
-    hintSwipe: 'glisse pour diriger', or: 'ou', hintPause: 'pause', hintReplay: 'rejouer', hintRole: 'camp',
+    hintSwipe: 'glisse pour diriger', or: 'ou', hintPause: 'pause', hintReplay: 'rejouer', 
     lg1: 'Touche les humains errants pour les recruter — c’est ainsi que tu grandis',
     lg2: 'Les bagarreurs abattent les zombies qui touchent la file',
     lg3: 'Les chasseurs tirent sur le zombie le plus proche, avec rechargement',
@@ -1017,40 +977,41 @@ const I18N = {
     lg5: 'Toucher un zombie sans pouvoir dévore ton chef — les trousses changent tout',
     lg6: 'Les coureurs sont vites ; les brutes encaissent trois coups et mordent fort',
     lg7: 'Les bondisseurs flashent en rouge puis foncent — écarte-toi',
-    z1: 'Toucher des humains sans pouvoir te submerge — recrute les errants pour grandir',
-    z2: 'Les cerveaux te dopent — chasse les vivants en fuite pour grandir',
-    z3: 'Les humains se dégagent — garde ta queue',
+    
+    
+    
   },
   de: {
     docTitle: 'DEAD LINE — Nachtschicht',
+    tagline: 'Nachtschicht',
     meta: 'DEAD LINE — ein Snake auf dem Friedhof. Rekrutiere die Lebenden, weiche der Horde aus, dreh den Spieß mit einem Verbandskasten.',
-    kicker: 'Wähle deine Seite', roleHuman: 'Mensch', roleZombie: 'Zombie',
-    tagHuman: 'In der Unterzahl,<br>nicht unterlegen', tagZombie: 'Die Horde<br>hat Hunger',
-    best: 'Rekord',
-    roleHintKeys: '<kbd>1</kbd> oder <kbd>2</kbd> · Pfeile + <kbd>Enter</kbd>',
-    roleHintTouch: 'tippe deine Seite',
-    readyH: 'Überlebe.', readyZ: 'Bekehre.',
+    roleHuman: 'Mensch', 
+    tagHuman: 'In der Unterzahl,<br>nicht unterlegen', 
+    
+    
+    
+    readyH: 'Überlebe.', 
     readyTextH: 'Sammle die Lebenden. Schütze die Kette.',
-    readyTextZ: 'Die Lebenden sind scheu — treibe sie mit deinem Schwanz.',
-    startH: 'Lauf starten', startZ: 'Jagd beginnen', changeRole: 'Seite wechseln',
+    
+    startH: 'Lauf starten', 
     readyHintKeys: 'beliebige Taste zum Start', readyHintTouch: 'tippen zum Start · wischen zum Lenken',
     paused: 'Pause',
     pauseHintKeys: '<kbd>P</kbd> oder <kbd>Leertaste</kbd> — oder klicken — zum Fortsetzen',
     pauseHintTouch: 'zum Fortsetzen irgendwo tippen',
     finalScore: 'Endpunkte', statsOne: '1 Kill · Welle {w}', statsMany: '{k} Kills · Welle {w}',
     overBest: 'Rekord {v}', newBest: 'Neuer Rekord!', restart: 'Nochmal!',
-    overHintKeys: '<kbd>R</kbd> zum Neustart · <kbd>C</kbd> zum Seitenwechsel',
-    overHintTouch: 'tippen zum Neustart · oder unten die Seite wechseln',
+    overHintKeys: '<kbd>R</kbd> zum Neustart',
+    overHintTouch: 'tippen zum Neustart',
     deathWall: 'Klatsch.', deathSelf: 'Verknotet.', deathHeadH: 'Verschlungen.', deathPickedH: 'Geplündert.',
-    deathHeadZ: 'Überwältigt.', deathPickedZ: 'Zerstreut.', gameOver: 'Game Over',
+    gameOver: 'Game Over',
     hudScore: 'Punkte', hudWave: 'Welle', hudKills: 'Kills', hudBest: 'Rekord',
-    frenzyH: 'Rausch', frenzyZ: 'Raserei',
-    toastWave: 'WELLE {n}', powerH: 'FRISS SIE!', powerZ: 'RASEREI!',
+    frenzyH: 'Rausch', 
+    toastWave: 'WELLE {n}', powerH: 'FRISS SIE!', 
     soundOn: 'TON AN', soundOff: 'TON AUS',
     mutedBoot: 'Ton aus — tippe auf das Lautsprechersymbol',
     ariaMute: 'Ton aus', ariaUnmute: 'Ton ein', ariaPause: 'Pausieren', ariaResume: 'Fortsetzen',
     ariaFrame: 'Dead Line Spiel', ariaBoard: 'Dead Line Brett', ariaLang: 'Sprache',
-    hintSwipe: 'wischen zum Lenken', or: 'oder', hintPause: 'Pause', hintReplay: 'Neustart', hintRole: 'Seite',
+    hintSwipe: 'wischen zum Lenken', or: 'oder', hintPause: 'Pause', hintReplay: 'Neustart', 
     lg1: 'Berühre umherstreifende Menschen, um sie anzuwerben — so wächst du',
     lg2: 'Kämpfer hacken Zombies nieder, die die Kette nahe ihnen fassen',
     lg3: 'Jäger schießen den nächsten Zombie ab, mit Abklingzeit',
@@ -1058,40 +1019,41 @@ const I18N = {
     lg5: 'Zombie ohne Power berühren verschlingt deinen Anführer — Verbände drehen den Spieß',
     lg6: 'Läufer sind schnell; Brutes stecken drei Treffer weg und beißen tief',
     lg7: 'Pouncer blinken rot und stoßen dann zu — geh aus dem Weg',
-    z1: 'Menschen ohne Power berühren überwältigt dich — wirf Umherstreifende an',
-    z2: 'Gehirne laden dich auf — erjage die fliehenden Lebenden zum Wachsen',
-    z3: 'Menschen reißen sich los — sichere deinen Schwanz',
+    
+    
+    
   },
   ko: {
     docTitle: 'DEAD LINE — 묘지 야근',
+    tagline: '묘지 야근',
     meta: 'DEAD LINE — 묘지 야근 스네이크. 생존자를 모으고, 무리를 피하고, 구급상자로 역전하세요.',
-    kicker: '진영을 골라라', roleHuman: '인간', roleZombie: '좀비',
-    tagHuman: '숫자는 못 해도<br>기세는 이긴다', tagZombie: '굶주린<br>무리',
-    best: '최고',
-    roleHintKeys: '<kbd>1</kbd> 또는 <kbd>2</kbd> · 방향키 + <kbd>Enter</kbd>',
-    roleHintTouch: '진영을 탭',
-    readyH: '살아남아라.', readyZ: '감염시켜라.',
+    roleHuman: '인간', 
+    tagHuman: '숫자는 못 해도<br>기세는 이긴다', 
+    
+    
+    
+    readyH: '살아남아라.', 
     readyTextH: '생존자를 모아라. 대열을 지켜라.',
-    readyTextZ: '산 자는 겁이 많다 — 꼬리로 몰아라.',
-    startH: '탈주 시작', startZ: '사냥 시작', changeRole: '진영 바꾸기',
+    
+    startH: '탈주 시작', 
     readyHintKeys: '아무 키나 눌러 시작', readyHintTouch: '탭하여 시작 · 스와이프하여 조종',
     paused: '일시정지',
     pauseHintKeys: '<kbd>P</kbd> 또는 <kbd>스페이스</kbd> — 클릭도 가능 — 계속하기',
     pauseHintTouch: '아무 곳이나 탭하여 계속',
     finalScore: '최종 점수', statsOne: '처치 1 · 제{w}파', statsMany: '처치 {k} · 제{w}파',
     overBest: '최고 {v}', newBest: '신기록!', restart: '다시 도전',
-    overHintKeys: '<kbd>R</kbd> 재도전 · <kbd>C</kbd> 진영 변경',
-    overHintTouch: '탭하여 재도전 · 아래에서 진영 변경',
+    overHintKeys: '<kbd>R</kbd> 재도전',
+    overHintTouch: '탭하여 재도전',
     deathWall: '으깨졌다.', deathSelf: '엉켜 쓰러졌다.', deathHeadH: '잡아먹혔다.', deathPickedH: '뜯어먹혔다.',
-    deathHeadZ: '제압당했다.', deathPickedZ: '흩어졌다.', gameOver: '게임 오버',
+    gameOver: '게임 오버',
     hudScore: '점수', hudWave: '파', hudKills: '처치', hudBest: '최고',
-    frenzyH: '돌격', frenzyZ: '광란',
-    toastWave: '제{n}파', powerH: '씹어 삼켜!', powerZ: '광란!',
+    frenzyH: '돌격', 
+    toastWave: '제{n}파', powerH: '씹어 삼켜!', 
     soundOn: '사운드 켬', soundOff: '사운드 끔',
     mutedBoot: '음소거 중 — 스피커 아이콘을 탭하면 켜집니다',
     ariaMute: '음소거', ariaUnmute: '음소거 해제', ariaPause: '일시정지', ariaResume: '계속',
     ariaFrame: 'Dead Line 게임', ariaBoard: 'Dead Line 보드', ariaLang: '언어',
-    hintSwipe: '스와이프로 조종', or: '또는', hintPause: '정지', hintReplay: '재도전', hintRole: '진영',
+    hintSwipe: '스와이프로 조종', or: '또는', hintPause: '정지', hintReplay: '재도전', 
     lg1: '배회하는 인간에게 닿으면 영입 — 그게 성장의 길',
     lg2: '전사는 대열 근처의 좀비를 베어 넘긴다',
     lg3: '사수는 쿨다운마다 가장 가까운 좀비를 저격',
@@ -1099,9 +1061,9 @@ const I18N = {
     lg5: '무강화 상태로 좀비에 닿으면 대장이 잡아먹힌다 — 구급상자가 역전',
     lg6: '질주자는 빠르다. 왕은 세 번을 맞아야 쓰러지고 물기도 세다',
     lg7: '도약자는 붉게 빛나며 돌진 — 비켜라',
-    z1: '무강화 상태로 인간에게 닿으면 제압당한다 — 배회자를 영입해 성장',
-    z2: '뇌가 각성 — 도망치는 산 자를 잡아 먹고 성장',
-    z3: '인간은 빠져나간다 — 꼬리를 지켜라',
+    
+    
+    
   },
 };
 
@@ -1147,7 +1109,6 @@ function applyLang() { // live re-render of every string without a reload
   canvas.setAttribute('aria-label', t('ariaBoard'));
   langPick.setAttribute('aria-label', t('ariaLang'));
   applyRoleSkin();
-  updateRoleCards();
   syncMuteBtn();
   langPick.value = LANG;
 }
@@ -1216,7 +1177,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.13.8'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.13.9'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 const Z_BREED = {
@@ -1504,9 +1465,8 @@ const SND = (() => {
 
 /* ═══════════════ state ═══════════════ */
 
-let state = 'role';             // role | start | playing | paused | over
+let state = 'start';            // start | playing | paused | dying | over (human-only)
 let role = 'human';              // human | zombie
-let roleFocus = 'human';
 let snake = [], prevSnake = [], roster = []; // roster[i] = the character riding snake[i]
 let dir = { x: 1, y: 0 }, queue = [];
 let score = 0, best = loadBestFor('human'), wave = 1, kills = 0;
@@ -1553,59 +1513,21 @@ function makeChar(faction, cls) {
     cls: cls || pickClass(), // survivor | fighter | hunter | medic
   };
 }
-const foeFaction = () => (role === 'human' ? 'zombie' : 'human');
+const foeFaction = () => 'zombie'; // human-only — the enemy is always the horde
 
 /* ═══════════════ role select ═══════════════ */
-
-function setRoleFocus(r) {
-  roleFocus = r;
-  cardHuman.classList.toggle('sel', r === 'human');
-  cardZombie.classList.toggle('sel', r === 'zombie');
-}
-
-function updateRoleCards() {
-  bestHumanEl.textContent  = fmt(loadBestFor('human'));
-  bestZombieEl.textContent = fmt(loadBestFor('zombie'));
-}
 
 function humanLegend() {
   const dots = ['hum', 'fight', 'hunt', 'med', 'bite', 'run', 'lunge'];
   return dots.map((d, i) => `<li><i class="dot d-${d}"></i><span>${t('lg' + (i + 1))}</span></li>`).join('');
 }
-function zombieLegend() {
-  return [['hum', 'z1'], ['brain', 'z2'], ['bite', 'z3']]
-    .map(([d, k]) => `<li><i class="dot d-${d}"></i><span>${t(k)}</span></li>`).join('');
-}
-
 function applyRoleSkin() {
-  readyTitle.textContent = role === 'human' ? t('readyH') : t('readyZ');
-  readyText.textContent  = role === 'human' ? t('readyTextH') : t('readyTextZ');
-  legendEl.innerHTML = role === 'human' ? humanLegend() : zombieLegend();
-  btnStartLabel.textContent = role === 'human' ? t('startH') : t('startZ');
-  frenzyLabel.textContent = role === 'human' ? t('frenzyH') : t('frenzyZ');
-  frenzyEl.classList.toggle('alt', role === 'human');
-}
-
-function pickRole(r) {
-  SND.ui();
-  role = r;
-  best = loadBestFor(r);
-  setRoleFocus(r);
-  reset();
-  applyRoleSkin();
-  state = 'start';
-  show(ovStart);
-}
-
-function toRoleSelect() {
-  clearTimeout(overTimer);
-  SND.droneStop();
-  SND.ui();
-  reset();
-  updateRoleCards();
-  setRoleFocus(role);
-  state = 'role';
-  show(ovRole);
+  readyTitle.textContent = t('readyH');
+  readyText.textContent  = t('readyTextH');
+  legendEl.innerHTML = humanLegend();
+  btnStartLabel.textContent = t('startH');
+  frenzyLabel.textContent = t('frenzyH');
+  frenzyEl.classList.add('alt');
 }
 
 /* ═══════════════ game flow ═══════════════ */
@@ -1622,7 +1544,7 @@ function reset() {
   maxLen = snake.length; pending = []; shots = [];
   foes = []; spawnFoe(); spawnFoe();
   allies = [];
-  if (role === 'human') { spawnAlly(); spawnAlly(); } // early recruits are reachable
+  spawnAlly(); spawnAlly(); // early recruits are reachable
   nextAllySpawnAt = ALLY_SPAWN_MS;
   nextSpawnAt = 2500; waveNextAt = WAVE_MS;
   pickup = null; nextPickupAt = 8000 + Math.random() * 4000;
@@ -1722,8 +1644,6 @@ function devour(i) { // the leader runs into a foe — whose funeral depends on 
   if (gt < frenzyUntil) { // powered: the line devours everything it touches, brutes included
     killFoe(f, powerKillPts(f));
     headFlashUntil = gt + 260;
-    if (role === 'zombie') // eating the living still grows the horde
-      pending.push(makeChar('zombie'), makeChar('zombie'));
     return;
   }
   // unpowered: the foe catches the leader and eats it on the spot — a short
@@ -1758,8 +1678,8 @@ function eatPickup() {
   powerCombo = 0; // the devour ladder resets every window — 200 400 800 1600
   SND.frenzy();
   nextPickupAt = gt + 9000 + Math.random() * 4000; // the gift is the primary weapon — keep it strategic, not rare
-  burst((snake[0].x + .5) * CELL, (snake[0].y + .5) * CELL, role === 'human' ? MED_P : BRAIN_P, 16);
-  showToast(role === 'human' ? t('powerH') : t('powerZ'), { pink: role !== 'human' });
+  burst((snake[0].x + .5) * CELL, (snake[0].y + .5) * CELL, MED_P, 16);
+  showToast(t('powerH'));
   updateHud();
 }
 
@@ -1793,7 +1713,7 @@ function bite(f, idx) {
   roster.length = snake.length;
   prevSnake = snake.map(s => ({ ...s })); // freeze the glide; gore covers the snap
 
-  if (role === 'human') {
+  {
     // the zombie devours the character it caught — hunched on the spot
     f.meals = (f.meals || 0) + 1;
     f.stunUntil = gt + EAT_MS; // occupied with the meal — this is the escape window
@@ -1807,19 +1727,6 @@ function bite(f, idx) {
     burst((f.x + .5) * CELL, (f.y + .5) * CELL,
       [caughtChar.skin, caughtChar.cloth, '#7a1f2b', '#a0303a'], 16);
     stains.push({ x: f.x, y: f.y, seed: (Math.random() * 1e9) | 0, bornAt: gt });
-  } else {
-    // humans wrestle free — knock the foe back and stun it
-    let bx = f.px, by = f.py;
-    const blocked = (x, y) =>
-      x < 0 || y < 0 || x >= COLS || y >= ROWS ||
-      foes.some(o => o !== f && o.x === x && o.y === y) ||
-      snake.some(s => s.x === x && s.y === y);
-    if (blocked(bx, by)) {
-      const opts = shuffled().map(c => ({ x: f.x + c.x, y: f.y + c.y })).filter(c => !blocked(c.x, c.y));
-      if (opts.length) { bx = opts[0].x; by = opts[0].y; } else { bx = f.x; by = f.y; }
-    }
-    f.x = bx; f.y = by; f.px = bx; f.py = by;
-    f.nextAt = gt + STUN_MS; f.stepDur = STUN_MS; f.stunUntil = gt + STUN_MS;
   }
 
   hurtAt = gt + 350;
@@ -1842,8 +1749,8 @@ function die(cause) {
 function finish() {
   const newBest = score > best;
   if (newBest) { best = score; saveBest(best); SND.best(); }
-  const tkey = deathCause === 'head'   ? (role === 'human' ? 'deathHeadH'   : 'deathHeadZ')
-             : deathCause === 'picked' ? (role === 'human' ? 'deathPickedH' : 'deathPickedZ')
+  const tkey = deathCause === 'head'   ? 'deathHeadH'
+             : deathCause === 'picked' ? 'deathPickedH'
              : deathCause === 'wall'   ? 'deathWall' : 'deathSelf';
   overTitle.textContent  = t(tkey);
   finalScore.textContent = fmt(score);
@@ -1885,8 +1792,8 @@ function spawnFoe() {
   const c = freeCell(5);
   if (!c) return;
   // zombie-role prey stay plain humans — classes are a human-role system
-  const ch = makeChar(foeFaction(), role === 'zombie' ? 'survivor' : undefined);
-  const breed = foeFaction() === 'zombie' ? pickZombieType(wave) : null;
+  const ch = makeChar('zombie');
+  const breed = pickZombieType(wave);
   if (breed === 'brute') ch.cloth = pick(BRUTE_CLOTH); // earthy rags — reads big & mean
   const z = breed && Z_BREED[breed];
   foes.push({
@@ -1964,7 +1871,7 @@ function stepFoe(f) {
   // an adrenaline rush interrupts lungers mid-flight
   if (frenzy && (f.windup || f.lunge)) { f.windup = null; f.lunge = null; f.nextLungeAt = gt + 2000; }
 
-  if (role === 'human') {
+  {
     // ── lunger breed: telegraph, then a locked-direction dash ──
     if (f.type === 'lunger') {
       if (f.windup) { // holding the crouch — direction already locked
@@ -2024,15 +1931,6 @@ function stepFoe(f) {
       } else {
         d = Math.random() < .55 ? f.dir : pick(CARD); // wander with momentum
       }
-    }
-  } else {
-    // humans are skittish — flee the head, shiver when alone
-    const dist = Math.hypot(head.x - f.x, head.y - f.y);
-    if (frenzy) { d = awayFrom(head, f); mode = 'panic'; }
-    else if (dist < HUMAN_FLEE_R) { d = awayFrom(head, f); mode = 'panic'; }
-    else {
-      if (Math.random() < .12) { f.nextAt = gt + 250 + Math.random() * 450; return; } // shiver in place
-      d = Math.random() < .3 ? f.dir : pick(CARD); // nervous wander, low momentum
     }
   }
   f.mode = mode;
@@ -2148,7 +2046,6 @@ function eatWanderer(f, ai) { // zombies eat unrecruited wanderers too — urgen
 }
 
 function updateAllies() {
-  if (role !== 'human') { allies = []; return; }
   const target = Math.min(ALLY_CAP, 2 + (wave >> 1));
   if (allies.length < target && gt >= nextAllySpawnAt) {
     spawnAlly();
@@ -2176,7 +2073,7 @@ function updateAllies() {
 
 /* ═══════════════ overlays, hud & juice ═══════════════ */
 
-const overlays = [ovRole, ovStart, ovPause, ovOver];
+const overlays = [ovStart, ovPause, ovOver];
 function show(el)      { overlays.forEach(o => o.classList.toggle('show', o === el)); }
 function hideOverlays(){ overlays.forEach(o => o.classList.remove('show')); }
 
@@ -2231,16 +2128,9 @@ window.addEventListener('keydown', e => {
   if (d || e.code === 'Space' || (state === 'over' && e.code === 'Backspace')) e.preventDefault();
 
   switch (state) {
-    case 'role':
-      if (e.code === 'Digit1' || e.code === 'Numpad1') pickRole('human');
-      else if (e.code === 'Digit2' || e.code === 'Numpad2') pickRole('zombie');
-      else if (d) setRoleFocus(d.x < 0 || d.y < 0 ? 'human' : 'zombie');
-      else if (e.code === 'Enter' || e.code === 'Space') pickRole(roleFocus);
-      break;
     case 'start':
       if (d) startGame(d);
       else if (e.code === 'Space' || e.code === 'Enter') startGame();
-      else if (e.code === 'Escape' || e.code === 'Backspace') toRoleSelect();
       break;
     case 'playing':
       if (d) queueDir(d);
@@ -2251,21 +2141,15 @@ window.addEventListener('keydown', e => {
       if (d) { resume(); queueDir(d); }
       else if (e.code === 'KeyP' || e.code === 'Space' || e.code === 'Enter') resume();
       else if (e.code === 'KeyR') startGame();
-      else if (e.code === 'Escape') toRoleSelect();
       break;
     case 'over':
       if (e.code === 'KeyR' || e.code === 'Enter' || e.code === 'Space') startGame();
-      else if (e.code === 'KeyC' || e.code === 'Escape' || e.code === 'Backspace') toRoleSelect();
       break;
   }
 });
 
 $('btn-start').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); startGame(); });
 $('btn-restart').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); startGame(); });
-$('btn-role-1').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); toRoleSelect(); });
-$('btn-role-2').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); toRoleSelect(); });
-cardHuman.addEventListener('click', e => { e.stopPropagation(); pickRole('human'); });
-cardZombie.addEventListener('click', e => { e.stopPropagation(); pickRole('zombie'); });
 btnPause.addEventListener('click', e => {
   e.stopPropagation(); e.currentTarget.blur();
   if (state === 'playing') pause();
@@ -2606,38 +2490,7 @@ function drawPickup(t) {
   const cx = (pickup.x + .5) * CELL, cy = (pickup.y + .5) * CELL;
   const alpha = urgent ? .45 + .45 * Math.abs(Math.sin(t / 110)) : 1;
 
-  if (role === 'zombie') {
-    // BRAIN
-    const r = CELL * .40 * Math.sqrt(CHAR_BOOST) * (1 + .07 * Math.sin(t / 240));
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    // soft halo (was canvas shadowBlur — slow on phones); gradient approximates
-    // the old glow: full strength at the brain's edge, fading out over ~18px
-    const halo = ctx.createRadialGradient(cx, cy, r, cx, cy, r + 18);
-    halo.addColorStop(0,  'rgba(255,158,199,.30)');
-    halo.addColorStop(.5, 'rgba(255,158,199,.11)');
-    halo.addColorStop(1,  'rgba(255,158,199,0)');
-    ctx.fillStyle = halo;
-    ctx.beginPath(); ctx.arc(cx, cy, r + 18, 0, 7); ctx.fill();
-    const g = ctx.createRadialGradient(cx - r*.3, cy - r*.35, r*.1, cx, cy, r);
-    g.addColorStop(0, '#ffd3e4'); g.addColorStop(.6, '#f27ba8'); g.addColorStop(1, '#d9548c');
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
-    ctx.restore();
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = 'rgba(160,40,90,.55)';
-    ctx.lineWidth = 1.2; ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - r*.7);
-    ctx.quadraticCurveTo(cx + r*.3, cy - r*.25, cx, cy + r*.05);
-    ctx.quadraticCurveTo(cx - r*.35, cy + r*.35, cx + r*.15, cy + r*.7);
-    ctx.moveTo(cx - r*.45, cy);
-    ctx.quadraticCurveTo(cx - r*.2, cy + r*.3, cx + r*.05, cy + r*.45);
-    ctx.stroke();
-    ctx.restore();
-  } else {
-    // MEDKIT
+  { // MEDKIT
     const s = CELL * .37 * Math.sqrt(CHAR_BOOST) * (1 + .06 * Math.sin(t / 240));
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -2688,7 +2541,7 @@ function drawFoe(f, t) {
   const stunned = t < f.stunUntil && !eating;
   const frenzy = t < frenzyUntil;
   const panicking = frenzy || f.mode === 'panic';
-  if (role === 'human') {
+  {
     if (eating) {
       // the victim — held down, fading, shrinking, gone
       const p = clamp01(1 - (f.eat.until - t) / EAT_MS);
@@ -2709,14 +2562,6 @@ function drawFoe(f, t) {
       fall: stunned ? clamp01((t - (f.stunUntil - STUN_MS)) / 220) * 1.45 : 0,
       scale: Math.min(f.type === 'brute' ? BRUTE_MEAL_CAP : MEAL_SCALE_CAP, 1 + MEAL_SCALE * fed),
     });
-  } else {
-    drawHumanChar(cx, cy, t, f, {
-      fx: f.fx, fy: f.fy,
-      panic: panicking,
-      eyes: panicking ? 'scared' : 'normal',
-      stunned,
-      fall: stunned ? clamp01((t - (f.stunUntil - STUN_MS)) / 220) * 1.45 : 0,
-    });
   }
 }
 
@@ -2733,7 +2578,7 @@ function drawSnake(t) {
   const skipHead = state === 'dying' && devouring; // the leader is being eaten — it's already gone
   // chain base — a soft rope under the characters so the line reads as a chain
   if (n > 1) {
-    ctx.strokeStyle = frenzy ? 'rgba(255,209,102,.28)' : role === 'human' ? 'rgba(163,241,96,.14)' : 'rgba(143,174,122,.16)';
+    ctx.strokeStyle = frenzy ? 'rgba(255,209,102,.28)' : 'rgba(163,241,96,.14)';
     ctx.lineWidth = 5 * Math.min(CHAR_BOOST, 1.25); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     const r0 = skipHead ? 1 : 0;
     ctx.beginPath(); ctx.moveTo(pts[r0].x, pts[r0].y);
@@ -2757,17 +2602,16 @@ function drawSnake(t) {
     const c = roster[i] || makeChar(role);
     const o = {
       fx, fy,
-      eyes: isHead ? (frenzy ? 'frenzy' : (role === 'human' ? 'leader' : 'red')) : 'normal',
+      eyes: isHead ? (frenzy ? 'frenzy' : 'leader') : 'normal',
       scale: 1, // uniform line — head no longer oversized
     };
-    if (role === 'human') drawHumanChar(p.x, p.y, t, c, o);
-    else drawZombieChar(p.x, p.y, t, c, o);
+    drawHumanChar(p.x, p.y, t, c, o); // human-only — the line is always human
   }
 
   // leader marker — a soft ring; gold while the line is powered
   const h = pts[0];
   if (!skipHead) {
-  ctx.strokeStyle = frenzy ? 'rgba(255,209,102,.85)' : role === 'human' ? 'rgba(163,241,96,.35)' : 'rgba(143,174,122,.4)';
+  ctx.strokeStyle = frenzy ? 'rgba(255,209,102,.85)' : 'rgba(163,241,96,.35)';
   ctx.lineWidth = 1.4;
   ctx.beginPath(); ctx.arc(h.x, h.y, 14 * Math.min(CHAR_BOOST, 1.2), 0, 7); ctx.stroke();
   } // !skipHead
@@ -2837,7 +2681,7 @@ function draw(t) {
 
   // frenzy tint (lime rush for humans, pink for zombie frenzy)
   if (t < frenzyUntil) {
-    const rgb = role === 'human' ? '163,241,160' : '255,130,170';
+    const rgb = '163,241,160';
     ctx.fillStyle = `rgba(${rgb},${(.03 + .012 * Math.sin(t / 140)).toFixed(3)})`;
     ctx.fillRect(0, 0, SIZE, SIZE);
   }
@@ -2883,9 +2727,7 @@ function frame(now) {
 
 applyLang();
 reset();
-updateRoleCards();
-setRoleFocus('human');
-show(ovRole);
+show(ovStart);
 syncMuteBtn();
 SND.setMuted(muted);   // applies to the context once a gesture unlocks it
 if (muted) showToast(t('mutedBoot'), { warn: true, slow: true }); // discoverability: silent boots explain themselves

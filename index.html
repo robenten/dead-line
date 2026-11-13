@@ -771,7 +771,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.13'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.13.2'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 const Z_BREED = {
@@ -861,19 +861,41 @@ const SND = (() => {
     if (readyCb) try { readyCb(); } catch {}
   }
 
+  let pulseBuf = null;                       // 1-sample silence — see unlock()
+  function silentPulse(){                   // Howler-style belt & braces: a 1-sample
+    try {                                    // silent blip nudges iOS into opening the
+      if (!pulseBuf) {                       // audio route inside the activation window
+        pulseBuf = ctx.createBuffer(1, 1, ctx.sampleRate);
+        pulseBuf.getChannelData(0)[0] = 0;
+      }
+      const src = ctx.createBufferSource();
+      src.buffer = pulseBuf;
+      src.connect(ctx.destination);
+      src.start(0);
+    } catch {}
+  }
+
   function unlock(){
+    // Per the HTML spec, a touch counts as an activation trigger only on
+    // pointerUP / touchEND / click — never pointerdown or touchstart — so this
+    // is bound to those (see the listeners at the bottom). It runs on every
+    // valid gesture until the context is really running.
     try {
       if (!ctx) {
+        try { if ('audioSession' in navigator) navigator.audioSession.type = 'playback'; } catch {} // Ring/Silent switch immunity (Safari 16.4+)
         const AC = window.AudioContext || window.webkitAudioContext;
         if (!AC) return;
         ctx = new AC();
         master = ctx.createGain();
         master.gain.value = muted ? 0 : .9;
         master.connect(ctx.destination);
-        ctx.onstatechange = onState;
+        ctx.onstatechange = onState;         // iOS interruption / recovery
       }
-      if (ctx.state !== 'running') ctx.resume().catch(() => {}); // synchronous, per gesture
-      else fireReady();                      // some browsers go straight to running
+      if (ctx.state === 'running') { fireReady(); return; }   // gate: no spam once running
+      // armed only when resume() resolves AND the state says so; if the
+      // promise hangs (WebKit 281566) the next valid gesture simply retries
+      ctx.resume().then(() => { if (ctx.state === 'running') fireReady(); }).catch(() => {});
+      silentPulse();
     } catch {}
   }
 
@@ -2377,13 +2399,16 @@ SND.onReady(() => {    // one-time "audio armed" confirmation (suspended→runni
 document.querySelectorAll('.build-tag').forEach(el => el.textContent = BUILD);
 requestAnimationFrame(frame);
 
-// unlock audio on every gesture — capture phase so the context exists
-// before any game handler (which may want to play a sound) runs; passive
-// so we never block scrolling
+// unlock audio on every VALID activation gesture — per the HTML spec a touch
+// only counts on pointerup/touchend/click (pointerdown is mouse-only, and
+// touchstart never counts — which is exactly why iOS stayed silent). Capture
+// phase so the context exists before any game handler runs; passive where
+// allowed so we never block scrolling.
 const unlockAudio = () => SND.unlock();
 window.addEventListener('keydown', unlockAudio, { capture: true });
-window.addEventListener('pointerdown', unlockAudio, { capture: true, passive: true });
-window.addEventListener('touchstart', unlockAudio, { capture: true, passive: true });
+window.addEventListener('pointerup', unlockAudio, { capture: true, passive: true });
+window.addEventListener('touchend', unlockAudio, { capture: true, passive: true });
+window.addEventListener('click', unlockAudio, { capture: true, passive: true });
 
 })();
 </script>

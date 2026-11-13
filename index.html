@@ -373,6 +373,7 @@
     color:var(--muted); padding:8px 12px; border-radius:8px;
     transition:color .15s ease, background .15s ease;
   }
+  @media (pointer:coarse){ .link-btn{ padding:15px 12px; } }  // real tap target on touch
   .link-btn:hover{ color:var(--ink); background:rgba(255,255,255,.05); }
   .link-btn:focus-visible{ outline:2px solid var(--accent-2); outline-offset:2px; }
 
@@ -492,8 +493,8 @@
     }
     .stage{ gap:16px; }
     .frame{
-      width:min(520px, calc(100vw - max(10px, env(safe-area-inset-left)) - max(10px, env(safe-area-inset-right))), calc(100vh - 240px));
-      width:min(520px, calc(100vw - max(10px, env(safe-area-inset-left)) - max(10px, env(safe-area-inset-right))), calc(100dvh - 240px));
+      width:min(640px, calc(100vw - max(10px, env(safe-area-inset-left)) - max(10px, env(safe-area-inset-right))), calc(100vh - 240px));
+      width:min(640px, calc(100vw - max(10px, env(safe-area-inset-left)) - max(10px, env(safe-area-inset-right))), calc(100dvh - 240px));
     }
     /* keyboard hints are noise on touch — keep the swipe line only */
     .hints > :not(.touch-only){ display:none; }
@@ -532,9 +533,9 @@
     .title{ font-size:14px; letter-spacing:.14em; text-indent:.14em; }
     .hints{ display:none; }
     .hud{ gap:6px; padding:6px 8px; }
-    .label{ font-size:8px; letter-spacing:.14em; }
+    .label{ font-size:8.5px; letter-spacing:.14em; }
     .stat{ gap:5px; }
-    .value{ font-size:12px; }
+    .value{ font-size:13px; }
     .icon-btn{ width:36px; height:36px; border-radius:9px; }
     .frame{
       width:min(520px, 92vw, calc(100vh - 108px));
@@ -760,11 +761,11 @@ const CHAR_PIVOT_Y = -2.5;   // head −8.5 … feet +8.6 → visual center ≈ 
 // small-screen legibility: the board shrinks on phones, so characters are
 // drawn larger relative to their cells to stay readable — pure render math,
 // the 24×24 collision grid is untouched. Boards ≥516px (desktop/tablet)
-// render exactly as before. boost = 516 / board-width, clamped to [1, 1.4].
+// render exactly as before. boost = 516 / board-width, clamped to [1, 1.5].
 let CHAR_BOOST = 1;
 function updateCharBoost(){
   try {
-    CHAR_BOOST = Math.max(1, Math.min(1.4, 516 / Math.max(canvas.getBoundingClientRect().width, 1)));
+    CHAR_BOOST = Math.max(1, Math.min(1.5, 516 / Math.max(canvas.getBoundingClientRect().width, 1)));
   } catch { CHAR_BOOST = 1; }
 }
 updateCharBoost();
@@ -811,7 +812,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.13.4'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.13.5'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 const Z_BREED = {

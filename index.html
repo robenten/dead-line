@@ -191,6 +191,8 @@
   }
   .toast.pink{ color:var(--brain); text-shadow:0 0 24px rgba(255,158,199,.6), 0 2px 10px rgba(0,0,0,.7); }
   .toast.go{ animation:toast 1.9s ease forwards; }
+  .toast.small{ font-size:11px; letter-spacing:.18em; text-indent:.18em; line-height:1.8; white-space:normal; max-width:86%; text-align:center; }
+  .toast .breed-dot{ display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:9px; vertical-align:baseline; box-shadow:0 0 8px currentColor; }
   .toast.warn{ color:var(--danger); text-shadow:0 0 24px rgba(229,72,77,.55), 0 2px 10px rgba(0,0,0,.7); }
 
   /* build badge — ground truth for "am I on the latest?" (page is cached ~10 min).
@@ -754,7 +756,7 @@ const I18N = {
     gameOver: 'Game over',
     hudScore: 'Score', hudWave: 'Wave', hudKills: 'Kills', hudBest: 'Best',
     frenzyH: 'Rush', 
-    toastWave: 'WAVE {n}', powerH: 'FIGHT BACK!', 
+    toastWave: 'WAVE {n} — {name}', powerH: 'FIGHT BACK!', 
     soundOn: 'SOUND ON', soundOff: 'SOUND OFF',
     mutedBoot: 'Sound off — tap the speaker icon to enable',
     ariaMute: 'Mute sound', ariaUnmute: 'Unmute sound', ariaPause: 'Pause game', ariaResume: 'Resume game',
@@ -765,8 +767,7 @@ const I18N = {
     lg3: 'Hunters snipe the nearest zombie, on a cooldown',
     lg4: 'Medics slowly regrow lost recruits, up to your peak',
     lg5: 'Touch a zombie unpowered and it devours your leader — a weapon turns the tables',
-    lg6: 'Runners are quick; Brutes need three hits and bite deep',
-    lg7: 'Lungers flash red, then dash — step out of the way',
+    lg6: 'Every wave unleashes a new, worse breed — watch the toast'
     
     
     
@@ -796,7 +797,7 @@ const I18N = {
     gameOver: 'ゲームオーバー',
     hudScore: 'スコア', hudWave: '波', hudKills: '撃破', hudBest: '最高',
     frenzyH: '突撃', 
-    toastWave: '第{n}波', powerH: '反撃だ！', 
+    toastWave: 'WAVE {n} — {name}', powerH: '反撃だ！', 
     soundOn: 'サウンド オン', soundOff: 'サウンド オフ',
     mutedBoot: '消音中 — スピーカーアイコンで戻せます',
     ariaMute: 'ミュート', ariaUnmute: 'ミュート解除', ariaPause: '一時停止', ariaResume: '再開',
@@ -807,8 +808,7 @@ const I18N = {
     lg3: 'ハンターは最寄りのゾンビを狙撃（クールダウン制）',
     lg4: 'メディックは失った仲間を少しずつ再生',
     lg5: '無強化でゾンビに触れるとリーダーが食われる — 武器で反撃せよ',
-    lg6: 'ランナーは速い。ブルートは3発必要で噛みも深い',
-    lg7: 'ランジャーは赤く光ってから突進 — 脇に避けろ',
+    lg6: '毎波、新しく凶悪な種族が現れる — 通知に注意'
     
     
     
@@ -838,7 +838,7 @@ const I18N = {
     gameOver: '游戏结束',
     hudScore: '得分', hudWave: '波次', hudKills: '击杀', hudBest: '最高',
     frenzyH: '狂奔', 
-    toastWave: '第{n}波', powerH: '反击！', 
+    toastWave: 'WAVE {n} — {name}', powerH: '反击！', 
     soundOn: '声音开启', soundOff: '声音关闭',
     mutedBoot: '已静音——点击扬声器图标开启',
     ariaMute: '静音', ariaUnmute: '取消静音', ariaPause: '暂停', ariaResume: '继续',
@@ -849,8 +849,7 @@ const I18N = {
     lg3: '猎人冷却完毕就狙杀最近的丧尸',
     lg4: '医师会慢慢补回失去的队员，直到峰值',
     lg5: '无强化时碰到丧尸，队长会被吞掉——拾取武器反击',
-    lg6: '疾行者跑得快；蛮击者要打三下，咬人也狠',
-    lg7: '突袭者会闪红光再猛冲——快躲开',
+    lg6: '每一波都会出现更凶残的新种类——留意提示'
     
     
     
@@ -880,7 +879,7 @@ const I18N = {
     gameOver: '遊戲結束',
     hudScore: '得分', hudWave: '波次', hudKills: '擊殺', hudBest: '最高',
     frenzyH: '狂奔', 
-    toastWave: '第{n}波', powerH: '反擊！', 
+    toastWave: 'WAVE {n} — {name}', powerH: '反擊！', 
     soundOn: '聲音開啟', soundOff: '聲音關閉',
     mutedBoot: '已靜音——點擊喇叭圖示開啟',
     ariaMute: '靜音', ariaUnmute: '取消靜音', ariaPause: '暫停', ariaResume: '繼續',
@@ -891,8 +890,7 @@ const I18N = {
     lg3: '獵人冷卻完畢就狙殺最近的殭屍',
     lg4: '醫護會慢慢補回失去的隊員，直到峰值',
     lg5: '無強化時碰到殭屍，隊長會被吞掉——拾取武器反擊',
-    lg6: '疾行者跑得快；蠻擊者要打三下，咬人也狠',
-    lg7: '突襲者會閃紅光再猛衝——快閃開',
+    lg6: '每一波都會出現更凶殘的新種類——留意提示'
     
     
     
@@ -922,7 +920,7 @@ const I18N = {
     gameOver: 'Fin del juego',
     hudScore: 'Puntos', hudWave: 'Oleada', hudKills: 'Bajas', hudBest: 'Récord',
     frenzyH: 'Ímpetu', 
-    toastWave: 'OLEADA {n}', powerH: '¡CONTRATACA!', 
+    toastWave: 'WAVE {n} — {name}', powerH: '¡CONTRATACA!', 
     soundOn: 'SONIDO: SÍ', soundOff: 'SONIDO: NO',
     mutedBoot: 'Sonido apagado — toca el altavoz para activarlo',
     ariaMute: 'Silenciar', ariaUnmute: 'Activar sonido', ariaPause: 'Pausar', ariaResume: 'Reanudar',
@@ -933,8 +931,7 @@ const I18N = {
     lg3: 'Los cazadores disparan al zombi más cercano, con recarga',
     lg4: 'Los médicos recuperan poco a poco a tus reclutas, hasta tu máximo',
     lg5: 'Tocar un zombi sin poder te devora al líder — un arma lo cambia todo',
-    lg6: 'Los corredores son rápidos; los brutos aguantan tres golpes y muerden fuerte',
-    lg7: 'Los saltones destellan en rojo y embisten — quítate de en medio',
+    lg6: 'Cada oleada trae una raza nueva y peor — mira el aviso'
     
     
     
@@ -964,7 +961,7 @@ const I18N = {
     gameOver: 'Partie terminée',
     hudScore: 'Score', hudWave: 'Vague', hudKills: 'Élim.', hudBest: 'Record',
     frenzyH: 'Ruée', 
-    toastWave: 'VAGUE {n}', powerH: 'RIPOSTE !', 
+    toastWave: 'WAVE {n} — {name}', powerH: 'RIPOSTE !', 
     soundOn: 'SON ACTIVÉ', soundOff: 'SON COUPÉ',
     mutedBoot: 'Son coupé — touche l’icône haut-parleur pour l’activer',
     ariaMute: 'Couper le son', ariaUnmute: 'Activer le son', ariaPause: 'Mettre en pause', ariaResume: 'Reprendre',
@@ -975,8 +972,7 @@ const I18N = {
     lg3: 'Les chasseurs tirent sur le zombie le plus proche, avec rechargement',
     lg4: 'Les médecins font revenir peu à peu tes recrues, jusqu’à ton record',
     lg5: 'Toucher un zombie sans pouvoir dévore ton chef — une arme renverse tout',
-    lg6: 'Les coureurs sont vites ; les brutes encaissent trois coups et mordent fort',
-    lg7: 'Les bondisseurs flashent en rouge puis foncent — écarte-toi',
+    lg6: 'Chaque vague amène une race pire — regarde l’annonce'
     
     
     
@@ -1006,7 +1002,7 @@ const I18N = {
     gameOver: 'Game Over',
     hudScore: 'Punkte', hudWave: 'Welle', hudKills: 'Kills', hudBest: 'Rekord',
     frenzyH: 'Rausch', 
-    toastWave: 'WELLE {n}', powerH: 'SCHLAG ZURÜCK!', 
+    toastWave: 'WAVE {n} — {name}', powerH: 'SCHLAG ZURÜCK!', 
     soundOn: 'TON AN', soundOff: 'TON AUS',
     mutedBoot: 'Ton aus — tippe auf das Lautsprechersymbol',
     ariaMute: 'Ton aus', ariaUnmute: 'Ton ein', ariaPause: 'Pausieren', ariaResume: 'Fortsetzen',
@@ -1017,8 +1013,7 @@ const I18N = {
     lg3: 'Jäger schießen den nächsten Zombie ab, mit Abklingzeit',
     lg4: 'Sanitäter lassen verlorene Rekruten langsam zurückwachsen',
     lg5: 'Zombie ohne Power berühren verschlingt deinen Anführer — die Waffe dreht den Spieß',
-    lg6: 'Läufer sind schnell; Brutes stecken drei Treffer weg und beißen tief',
-    lg7: 'Pouncer blinken rot und stoßen dann zu — geh aus dem Weg',
+    lg6: 'Jede Welle bringt eine neue, schlimmere Brut — achte auf den Hinweis'
     
     
     
@@ -1048,7 +1043,7 @@ const I18N = {
     gameOver: '게임 오버',
     hudScore: '점수', hudWave: '파', hudKills: '처치', hudBest: '최고',
     frenzyH: '돌격', 
-    toastWave: '제{n}파', powerH: '반격!', 
+    toastWave: 'WAVE {n} — {name}', powerH: '반격!', 
     soundOn: '사운드 켬', soundOff: '사운드 끔',
     mutedBoot: '음소거 중 — 스피커 아이콘을 탭하면 켜집니다',
     ariaMute: '음소거', ariaUnmute: '음소거 해제', ariaPause: '일시정지', ariaResume: '계속',
@@ -1059,8 +1054,7 @@ const I18N = {
     lg3: '사수는 쿨다운마다 가장 가까운 좀비를 저격',
     lg4: '의무병은 잃은 대원을 서서히 되살린다',
     lg5: '무강화 상태로 좀비에 닿으면 대장이 잡아먹힌다 — 무기로 반격',
-    lg6: '질주자는 빠르다. 왕은 세 번을 맞아야 쓰러지고 물기도 세다',
-    lg7: '도약자는 붉게 빛나며 돌진 — 비켜라',
+    lg6: '매 파도마다 더 흉악한 새 종족이 나타난다 — 알림을 주목하라'
     
     
     
@@ -1157,6 +1151,15 @@ const makeEyeGlow = (rgb, pupil) => (() => {
   return c;
 })();
 const EYE_GLOW       = makeEyeGlow('255,95,86', '#ff5f56');  // red — walkers/runners/brutes
+const GLOW_BUCKET = new Map(); // hue-bucketed glows for ladder breeds — ≤12 entries, bounded
+function glowFor(bIdx) {
+  const b = BREEDS[bIdx ?? 0];
+  if (bIdx < 4) return bIdx === 2 ? EYE_GLOW_AMBER : EYE_GLOW;
+  const k = Math.floor(b.hue / 30) * 30;
+  let g = GLOW_BUCKET.get(k);
+  if (!g) { g = makeEyeGlow(`${Math.round(140 + Math.sin(k * .0174) * 60)},${Math.round(60 + Math.cos(k * .0174) * 40)},70`, '#ff5f56'); GLOW_BUCKET.set(k, g); }
+  return g;
+}
 const EYE_GLOW_AMBER = makeEyeGlow('255,154,60', '#ff9a3c'); // orange — lungers
 const drawEyeGlow = (x, y, sprite = EYE_GLOW) => ctx.drawImage(sprite, x - 6, y - 6, 12, 12);
 
@@ -1177,30 +1180,123 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.14.2'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.14.3'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
-const Z_BREED = {
-  walker: { hp: 1, bite: 2, floor: 170 },  // the shambler
-  runner: { hp: 1, bite: 2, floor: 115 },  // fast but frail
-  brute:  { hp: 3, bite: 3, floor: 230 },  // slow, soaks hits, bites deep, shrugs off the rush
-  lunger: { hp: 1, bite: 2, floor: 175 },  // telegraphs, then dashes at the leader
+/* ═══════════════ the breed ladder — 100 rungs, one per wave ═══════════════
+   Wave N spawns ONLY breed N (older foes survive until killed). Stats are
+   CONSTANT per breed — no wave re-scaling; difficulty comes from the ladder
+   + the growing horde. The table is built once by buildBreeds() from a fixed
+   seed (deterministic, reviewable, zero runtime randomness), anchored on the
+   classic four (walker · runner · lunger · brute ≈ today's brute).
+   Guardrails: during FIGHT BACK every breed still dies to head contact in
+   one hit; unpowered head contact still devours the leader, any breed. */
+const AB_POOL = ['pack', 'edger', 'flicker', 'scream', 'blink', 'regen', 'split', 'spit'];
+// dash is the lunger's signature (rung 3) — later breeds unlock from AB_POOL
+
+function mulberry32(a) { // tiny seeded PRNG — stable table, not gameplay rng
+  return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+
+function buildBreeds() {
+  const rnd = mulberry32(0xdead11);
+  const B = [];
+  for (let i = 0; i < 100; i++) {
+    const k = i / 99;
+    let b;
+    if (i === 0) b = { name: 'Walker', hp: 1, bite: 2, moveMs: 310, ab: [], hue: 96, sx: 1, sy: 1, eyes: 2, spikes: 0 };
+    else if (i === 1) b = { name: 'Runner', hp: 1, bite: 2, moveMs: 205, ab: [], hue: 48, sx: .72, sy: 1.14, eyes: 2, spikes: 0 };
+    else if (i === 2) b = { name: 'Lunger', hp: 1, bite: 2, moveMs: 300, ab: ['dash'], hue: 18, sx: 1.06, sy: .9, eyes: 2, spikes: 0 };
+    else if (i === 3) b = { name: 'Brute', hp: 3, bite: 3, moveMs: 380, ab: [], hue: 26, sx: 1.5, sy: 1.3, eyes: 2, spikes: 0 };
+    else {
+      // generated rungs — every stat ratchets, never below the previous rung:
+      // speed strictly rises (moveMs falls), hp climbs a step every ~12 rungs,
+      // bite every ~20, and abilities stack up to three.
+      const prev = B[i - 1];
+      const hp = 3 + Math.floor((i - 4) / 12);            // starts at brute tier, climbs to 10
+      const bite = Math.min(6, 3 + Math.floor((i - 4) / 22));
+      const moveMs = Math.max(96, 90 + 262 * Math.pow(1 - k, 1.28) - rnd() * 8);
+      const wantAb = Math.min(3, 1 + Math.floor((i - 4) / 7));
+      const ab = [];
+      for (let a = 0; a < wantAb; a++) ab.push(AB_POOL[(i * 3 + a * 5) % 8]);
+      const uniq = [...new Set(ab)];
+      b = { name: '', hp: Math.max(hp, 1), bite: Math.max(bite, prev.bite), moveMs: Math.max(88, Math.min(moveMs, prev.moveMs - 1)), // floor 88ms ≈ player max speed
+            ab: [...new Set(ab)].slice(0, 3), hue: (26 + i * 47) % 360,
+            sx: Math.min(.82 + k * .48 + rnd() * .22, 1.5), sy: .84 + k * .42, eyes: 1 + ((i * 7) % 3), spikes: (i * 5) % 4 };
+    }
+    B.push(b);
+  }
+  return B;
+}
+const BREEDS = buildBreeds();
+
+/* breed names per language — tiered adjective pools (early → nightmare) plus
+   nouns, combined deterministically per rung. zh-Hans/zh-Hant are genuinely
+   separate lexicons, not conversions. */
+const BREED_NAMES = {
+  en: { adj: [
+      ['Hungry','Shambling','Rotten','Grasping','Moaning','Hollow','Wretched','Pale','Clawing','Feral'],
+      ['Rabid','Venomous','Savage','Merciless','Snarling','Relentless','Vicious','Howling','Grim','Bloodthirsty'],
+      ['Nightmarish','Hellish','Unholy','Dreadful','Cursed','Apocalypse','Eldritch','Abominable','Forsaken','Final']],
+    noun: ['Stalker','Ghoul','Reaver','Fiend','Husk','Mauler','Lurker','Wretch','Horror','Shambler','Crawler','Reaper'] },
+  ja: { adj: [
+      ['飢えた','腐った','青白い','彷徨う','うめく','虚ろな','みすぼらしい','浅ましい','ひっかく','野生の'],
+      ['凶暴な','猛毒の','残虐な','容赦ない','うなる','執拗な','悪辣な','咆哮する','冷酷な','血に飢えた'],
+      ['悪夢の','地獄の','不吉な','恐ろしい','呪われた','終焉の','異形の','忌まわしい','見捨てられた','最後の']],
+    noun: ['徘徊者','グール','捕食者','悪鬼','亡骸','処刑人','潜伏者','亡霊','怪異','這う者','死神'] },
+  'zh-hans': { adj: [
+      ['饥饿的','腐烂的','苍白的','游荡的','呻吟的','空洞的','悲惨的','死灰的','抓挠的','野性的'],
+      ['狂暴的','剧毒的','残虐的','无情的','低吼的','执拗的','凶残的','嘶吼的','冷酷的','嗜血的'],
+      ['噩梦的','地狱的','不祥的','恐怖的','被诅咒的','终焉的','异形的','憎恶的','被遗弃的','最后的']],
+    noun: ['潜伏者','食尸鬼','掠夺者','恶鬼','空壳','刽子手','埋伏者','亡灵','怪物','爬行者','收割者'] },
+  'zh-hant': { adj: [
+      ['飢餓的','腐爛的','慘白的','漫遊的','呻吟的','虛無的','悽慘的','灰敗的','撕抓的','野性'],
+      ['兇殘的','劇毒的','暴虐的','無情的','低吼的','糾纏的','狠辣的','嘶吼的','冷血的','嗜血'],
+      ['噩夢的','地獄的','不祥的','駭人的','受詛咒的','終末的','異形的','憎惡的','被離棄的','最終']],
+    noun: ['潛伏者','食屍鬼','掠奪者','惡鬼','空殼','劊子手','埋伏者','亡靈','怪物','爬行者','收割者'] },
+  es: { adj: [
+      ['Hambriento','Podrido','Pálido','Errante','Gimiente','Hueco','Miserable','Ceniza','Zarpador','Feral'],
+      ['Rabioso','Venenoso','Feroz','Despiadado','Gritón','Incansable','Feroz','Aullador','Siniestro','Sediento'],
+      ['Nocturno','Infernal','Impío','Espantoso','Maldito','Apocalíptico','Eldritch','Abominable','Olvidado','Final']],
+    noun: ['Acechador','Ghul','Devorador','Maligno','Cascarón','Destazador','Ladrón','Espectro','Horror','Reptador','Segador'] },
+  fr: { adj: [
+      ['Affamé','Pourri','Pâle','Errant','Gémissant','Creux','Miséreux','Cendre','Griffu','Sauvage'],
+      ['Enragé','Venimeux','Féroce','Impitoyable','Hurleur','Acharné','Vicieux','Grinçant','Sombre','Assoiffé'],
+      ['Cauchemardesque','Infernal','Impie','Terrifiant','Maudit','Apocalyptique','Étrange','Abominable','Délaissé','Final']],
+    noun: ['Rôdeur','Goule','Ravageur','Démon','Écorché','Bourreau','Guetteur','Spectre','Horreur','Rampeur','Faucheur'] },
+  de: { adj: [
+      ['Hungriger','Verfaulter','Fahler','Irrer','Stöhnender','Hohler','Elender','Aschiger','Kralliger','Wilder'],
+      ['Tobsüchtiger','Giftiger','Grimmiger','Gnadenloser','Heulender','Unerbittlicher','Bösartiger','Brüllender','Finsterer','Blutrünstiger'],
+      ['Albtraumhafter','Höllischer','Unheiliger','Schrecklicher','Verfluchter','Apokalyptischer','Schränkenhafter','Abscheulicher','Verlassener','Letzter']],
+    noun: ['Lauerer','Ghul','Reißer','Schreck','Schinder','Hetzer','Pirscher','Schemen','Greuel','Kriecher','Schnitter'] },
+  ko: { adj: [
+      ['굶주린','썩은','창백한','떠도는','신음하는','텅 빈','비참한','잿빛','항아리는','야생의'],
+      ['광포한','맹독의','잔혹한','무자비한','으르렁대는','집요한','흉악한','포효하는','냉혹한','피에 굶주린'],
+      ['악몽의','지옥의','불길한','끔찍한','저주받은','종말의','이형의','혐오스러운','버려진','마지막']],
+    noun: ['추적자','구울','포식자','악귀','허울','처형자','잠복자','망령','괴물','기어다니는 자','사신'] },
 };
+
+function breedName(i) { // rung index → localized name (fallback EN, like t())
+  i = Math.min(Math.max(i, 0), 99);
+  if (i < 4) { const four = { en: ['Walker','Runner','Lunger','Brute'], ja: ['ウォーカー','ランナー','ランジャー','ブルート'], 'zh-hans': ['步行者','疾行者','突袭者','蛮尸'], 'zh-hant': ['步行者','疾行者','突襲者','蠻屍'], es: ['Caminante','Corredor','Saltador','Bruto'], fr: ['Rôdeur','Coureur','Fonceur','Brute'], de: ['Lauerer','Renner','Springer','Brute'], ko: ['워커','러너','런저','브루트'] };
+    const f = (four[LANG] || four.en)[i]; return f; }
+  const pool = BREED_NAMES[LANG] || BREED_NAMES.en;
+  const tier = Math.min(2, Math.floor(i / 34));
+  const a = pool.adj[tier][i % pool.adj[tier].length];
+  const n = pool.noun[(i * 7 + 3) % pool.noun.length];
+  return LANG === 'ja' || LANG === 'zh-hans' || LANG === 'zh-hant' ? a + n : a + ' ' + n;
+}
 const LUNGER_RANGE = 7;      // cells — will wind up a dash inside this radius
 const LUNGER_WINDUP = 620;   // ms of telegraph (direction locks at wind-up: dodgeable)
 const LUNGER_DASH_MS = 70;   // ms per cell while dashing
 const LUNGER_DASH_LEN = 4;   // cells per dash
 const LUNGER_CD = 3400;      // ms between dashes (plus jitter)
+const REGEN_MS = 6500;       // regenerator: ms between HP restores
+const SCREAM_MS = 5200;      // screamer: ms between shrieks
+const SPIT_MS = 6200;        // spitter: ms between acid lobs
+const BLINK_MS = 4200;       // blinker: ms between teleports
 const BRUTE_CLOTH = ['#5a4030', '#6b4a35', '#4a3630', '#5c3d3d']; // earthy rags
 
-function pickZombieType(w) { // spawn mix ramps the breeds in wave by wave
-  const r = Math.random();
-  if (w >= 7) return r < .40 ? 'walker' : r < .65 ? 'runner' : r < .85 ? 'lunger' : 'brute';
-  if (w >= 5) return r < .45 ? 'walker' : r < .70 ? 'runner' : r < .85 ? 'lunger' : 'brute';
-  if (w >= 3) return r < .60 ? 'walker' : r < .85 ? 'runner' : 'lunger';
-  if (w >= 2) return r < .70 ? 'walker' : 'runner';
-  return r < .80 ? 'walker' : 'runner';
-}
 const ALLY_CAP = 6;           // max wandering recruits on the board (human role)
 const ALLY_SPAWN_MS = 3500;   // pacing between recruit spawns
 const ALLY_FLEE_R = 4;        // wanderers bolt from zombies this close
@@ -1472,7 +1568,7 @@ let dir = { x: 1, y: 0 }, queue = [];
 let score = 0, best = loadBestFor('human'), wave = 1, kills = 0;
 let stepMs = START_MS, acc = 0, interp = 0;
 let gt = 0;                      // game clock — only advances while playing
-let foes = [], pickup = null, nextPickupAt = 0;
+let foes = [], zones = [], pickup = null, nextPickupAt = 0;
 let devouring = null;   // leader caught unpowered — the eat-out beat before the card
 let pops = [];          // floating powered-kill score pops
 let powerCombo = 0;     // Pac-Man ladder within one rush: 200 400 800 1600
@@ -1518,7 +1614,7 @@ const foeFaction = () => 'zombie'; // human-only — the enemy is always the hor
 /* ═══════════════ role select ═══════════════ */
 
 function humanLegend() {
-  const dots = ['hum', 'fight', 'hunt', 'med', 'bite', 'run', 'lunge'];
+  const dots = ['hum', 'fight', 'hunt', 'med', 'bite', 'run'];
   return dots.map((d, i) => `<li><i class="dot d-${d}"></i><span>${t('lg' + (i + 1))}</span></li>`).join('');
 }
 function applyRoleSkin() {
@@ -1542,7 +1638,7 @@ function reset() {
   score = 0; wave = 1; kills = 0;
   stepMs = START_MS; acc = 0; interp = 0; gt = 0;
   maxLen = snake.length; pending = []; shots = [];
-  foes = []; spawnFoe(); spawnFoe();
+  foes = []; zones = []; spawnFoe(); spawnFoe();
   allies = [];
   spawnAlly(); spawnAlly(); // early recruits are reachable
   nextAllySpawnAt = ALLY_SPAWN_MS;
@@ -1595,9 +1691,24 @@ function step() {
   if (roster.length > snake.length) roster.length = snake.length;
   if (snake.length > maxLen) maxLen = snake.length;
 
-  for (let i = foes.length - 1; i >= 0; i--) {
+    for (let i = foes.length - 1; i >= 0; i--) {
     if (foes[i].x === head.x && foes[i].y === head.y) devour(i);
   }
+    for (let zi = zones.length - 1; zi >= 0; zi--) { // acid zones — armed puddles eat a recruit
+      const zn = zones[zi];
+      if (gt < zn.armAt) continue;
+      const idx = snake.findIndex(c2 => c2.x === zn.x && c2.y === zn.y);
+      if (idx >= 0) {
+        zones.splice(zi, 1);
+        const lost = Math.min(1, snake.length - 1);
+        for (let l = 0; l < lost; l++) { snake.pop(); roster.pop(); }
+        burst((zn.x + .5) * CELL, (zn.y + .5) * CELL, ['#7da87b', '#a3f160'], 8);
+        hurtAt = gt + 350; shake('md'); SND.hurt();
+        if (snake.length < SNAKE_MIN) { die('picked'); return; }
+        break;
+      }
+    }
+
   for (let i = allies.length - 1; i >= 0; i--) {
     const a = allies[i];
     if (a.x === head.x && a.y === head.y) recruit(i);
@@ -1627,6 +1738,16 @@ function killFoe(f, pts) { // shared by headbutts, fighter saves and hunter shot
     updateHud();
     return;
   }
+  const kb = BREEDS[f.bIdx];
+  if (!f.mini && kb.ab.includes('split') && foes.length < FOE_CAP + 4) { // splitter — two smaller crawl from the corpse
+    for (const dx of [-1, 1]) {
+      const sx2 = f.x + dx, sy2 = f.y;
+      if (sx2 >= 0 && sy2 >= 0 && sx2 < COLS && sy2 < ROWS && !occupied(sx2, sy2)) {
+        foes.push({ ...f, x: sx2, y: sy2, px: sx2, py: sy2, mini: true, hp: 1, eat: null,
+                    windup: null, lunge: null, stunUntil: gt + 250, nextAt: gt + 600 });
+      }
+    }
+  }
   foes.splice(i, 1);
   kills++;
   score += pts;
@@ -1635,7 +1756,7 @@ function killFoe(f, pts) { // shared by headbutts, fighter saves and hunter shot
   stains.push({ x: f.x, y: f.y, seed: (Math.random() * 1e9) | 0, bornAt: gt });
   if (stains.length > 30) stains.shift();
   shake('sm');
-  SND.kill(1, f.type);
+  SND.kill(1, kb.hp >= 3 ? 'brute' : kb.moveMs < 210 ? 'runner' : null);
   updateHud();
 }
 
@@ -1702,7 +1823,7 @@ function bite(f, idx) {
   }
   const caughtChar = roster[idx] || makeChar(role);
   SND.hurt();
-  const lost = Math.min(f.type === 'brute' ? Z_BREED.brute.bite : BITE_LOSS, snake.length - 1);
+  const lost = Math.min(BREEDS[f.bIdx].bite, snake.length - 1);
   for (let k = 0; k < lost; k++) {
     const t = snake[snake.length - 1];
     burst((t.x + .5) * CELL, (t.y + .5) * CELL, ROT, 8);
@@ -1730,7 +1851,7 @@ function bite(f, idx) {
   }
 
   hurtAt = gt + 350;
-  shake(f.type === 'brute' ? 'lg' : 'md'); // a brute bite rocks the whole board
+  shake(BREEDS[f.bIdx].hp >= 3 ? 'lg' : 'md'); // a heavyweight bite rocks the whole board
   if (snake.length < SNAKE_MIN) { die('picked'); return; }
   updateHud();
 }
@@ -1788,27 +1909,43 @@ function freeCell(minHeadDist) {
   return free.length ? pick(free) : null;
 }
 
+function edgeCellNearest(h) { // wall-spawners enter at the board edge nearest the leader
+  let best = null, bd = 1e9;
+  for (let x = 0; x < COLS; x++) {
+    for (const y of [0, ROWS - 1]) {
+      const d = Math.max(Math.abs(h.x - x), Math.abs(h.y - y));
+      if (d < bd && !occupied(x, y)) { bd = d; best = { x, y }; }
+    }
+  }
+  for (let y = 0; y < ROWS; y++) {
+    for (const x of [0, COLS - 1]) {
+      const d = Math.max(Math.abs(h.x - x), Math.abs(h.y - y));
+      if (d < bd && !occupied(x, y)) { bd = d; best = { x, y }; }
+    }
+  }
+  return bd <= 6 ? best : null; // only worth it if the edge is genuinely close
+}
+
 function spawnFoe() {
-  const c = freeCell(5);
+  const bi = Math.min(wave - 1, 99);          // wave N spawns breed N — only breed N
+  const b = BREEDS[bi];
+  const c = b.ab.includes('edger') ? (edgeCellNearest(snake[0]) || freeCell(5)) : freeCell(5);
   if (!c) return;
-  // zombie-role prey stay plain humans — classes are a human-role system
-  const ch = makeChar('zombie');
-  const breed = pickZombieType(wave);
-  if (breed === 'brute') ch.cloth = pick(BRUTE_CLOTH); // earthy rags — reads big & mean
-  const z = breed && Z_BREED[breed];
+  const ch = makeChar('zombie');              // hue-locked identity — one look per breed
+  ch.skin = `hsl(${b.hue} 13% 60%)`;
+  ch.hair = `hsl(${b.hue} 15% 18%)`;
+  ch.cloth = `hsl(${b.hue} 18% 28%)`;
   foes.push({
     x: c.x, y: c.y, px: c.x, py: c.y,
     fx: 0, fy: 1, dir: pick(CARD), mode: 'wander',
     skin: ch.skin, hair: ch.hair, cloth: ch.cloth, arms: ch.arms, phase: ch.phase,
-    type: breed, hp: z ? z.hp : 1, hitAt: 0,
-    speedFloor: z ? z.floor : 170,
-    moveMs: breed === 'runner' ? Math.max(Z_BREED.runner.floor, 205 - wave * 8 + Math.random() * 50)
-          : breed === 'brute'  ? Math.max(Z_BREED.brute.floor, 380 - wave * 8 + Math.random() * 60)
-          : breed === 'lunger' ? Math.max(Z_BREED.lunger.floor, 300 - wave * 10 + Math.random() * 80)
-          :                         Math.max(190, 310 - wave * 10 + Math.random() * 80),
+    bIdx: bi, mini: false, hp: b.hp, hitAt: 0,
+    moveMs: b.moveMs,                         // constant per breed — no wave scaling
     nextAt: gt + 400 + Math.random() * 800,
     lastMoveAt: gt, stepDur: 400, stunUntil: 0,
-    nextLungeAt: gt + 1600 + Math.random() * 2400, // lungers only
+    nextLungeAt: gt + 1600 + Math.random() * 2400,   // dash
+    nextSpitAt: gt + 2000, nextBlinkAt: gt + 2600 + Math.random() * 2000,
+    nextScreamAt: gt + 3000, nextRegenAt: 0, blinkWarn: 0, screamAt: 0,
   });
 }
 
@@ -1828,9 +1965,8 @@ function updateFoes() {
   if (gt >= waveNextAt) {
     wave++;
     waveNextAt = gt + WAVE_MS;
-    showToast(t('toastWave', { n: wave }));
+    showToast(t('toastWave', { n: wave, name: breedName(wave - 1) }), { glyph: BREEDS[Math.min(wave - 1, 99)].hue });
     SND.wave();
-    for (const f of foes) f.moveMs = Math.max(f.speedFloor || 170, f.moveMs * .95);
     updateHud();
   }
   // pickup lifecycle
@@ -1849,8 +1985,58 @@ function updateFoes() {
       continue; // busy eating — no movement
     }
     if (gt < f.stunUntil) continue;
+    const ab = f.mini ? [] : BREEDS[f.bIdx].ab;
+    // regenerator — knits its wounds if you leave it alone
+    if (ab.includes('regen') && f.hp < BREEDS[f.bIdx].hp && gt >= f.nextRegenAt && gt - f.hitAt > 5000) {
+      f.hp++; f.nextRegenAt = gt + REGEN_MS;
+      burst((f.x + .5) * CELL, (f.y + .5) * CELL, ['#7da87b', '#a3f160'], 5);
+    }
+    // screamer — a shriek that briefly hastens the horde around it
+    if (ab.includes('scream') && gt >= f.nextScreamAt) {
+      for (const f2 of foes) {
+        if (f2 !== f && Math.max(Math.abs(f2.x - f.x), Math.abs(f2.y - f.y)) <= 4)
+          f2.nextAt = Math.min(f2.nextAt, gt + f2.moveMs * .55);
+      }
+      f.nextScreamAt = gt + SCREAM_MS; f.screamAt = gt;
+    }
+    // spitter — lobs acid at your line from range (zones arm after a beat)
+    if (ab.includes('spit') && gt >= f.nextSpitAt) {
+      const head = snake[0];
+      if (Math.max(Math.abs(head.x - f.x), Math.abs(head.y - f.y)) <= 7) {
+        const seg = snake[1 + Math.floor(Math.random() * Math.max(1, snake.length - 1))] || head;
+        zones.push({ x: seg.x, y: seg.y, bornAt: gt, armAt: gt + 600, until: gt + 3400 });
+        f.nextSpitAt = gt + SPIT_MS;
+        SND.lungeWarn();
+      }
+    }
+    // blinker — a shimmer, then it is suddenly closer
+    if (ab.includes('blink') && gt >= frenzyUntil && gt >= f.nextBlinkAt && !f.blinkWarn) {
+      const head = snake[0];
+      if (Math.max(Math.abs(head.x - f.x), Math.abs(head.y - f.y)) > 5) {
+        f.blinkWarn = gt + 420; f.nextBlinkAt = gt + BLINK_MS + Math.random() * 2000;
+      } else f.nextBlinkAt = gt + 1800;
+    }
+    if (f.blinkWarn && gt >= f.blinkWarn) {
+      f.blinkWarn = 0;
+      if (gt >= frenzyUntil) { // fleeing — no blinking at the powered line
+      const head = snake[0];
+      let bx = f.x, by = f.y;
+      for (let s2 = 0; s2 < 3; s2++) {
+        const nx = bx + Math.sign(head.x - bx), ny = by + Math.sign(head.y - by);
+        if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS || occupied(nx, ny)) break;
+        bx = nx; by = ny;
+      }
+      if (bx !== f.x || by !== f.y) {
+        burst((f.x + .5) * CELL, (f.y + .5) * CELL, ['#7f9dc9', '#c9d6f2'], 6);
+        f.px = bx; f.py = by; f.x = bx; f.y = by;
+        burst((bx + .5) * CELL, (by + .5) * CELL, ['#7f9dc9', '#c9d6f2'], 6);
+      }
+      }
+    }
     if (gt >= f.nextAt) stepFoe(f);
   }
+  // acid zones — expire with a hiss
+  zones = zones.filter(zn => gt < zn.until);
 }
 
 function awayFrom(from, f) {
@@ -1873,7 +2059,7 @@ function stepFoe(f) {
 
   {
     // ── lunger breed: telegraph, then a locked-direction dash ──
-    if (f.type === 'lunger') {
+    if (BREEDS[f.bIdx].ab.includes('dash')) {
       if (f.windup) { // holding the crouch — direction already locked
         if (gt < f.windup.until) { f.nextAt = f.windup.until; f.stepDur = f.windup.until - gt; return; }
         f.lunge = { dx: f.windup.dx, dy: f.windup.dy, left: LUNGER_DASH_LEN };
@@ -1924,7 +2110,10 @@ function stepFoe(f) {
         const s = snake[i], dd = (s.x - f.x) ** 2 + (s.y - f.y) ** 2;
         if (dd < bd) { bd = dd; bi = i; }
       }
-      if (bi >= 0 && Math.sqrt(bd) < LUNGE_R && Math.random() < LUNGE_P) {
+      let packKin = false; // pack-hunters flock — kin nearby means blood in the water
+      if (BREEDS[f.bIdx].ab.includes('pack'))
+        for (const f2 of foes) if (f2 !== f && f2.bIdx === f.bIdx && Math.max(Math.abs(f2.x - f.x), Math.abs(f2.y - f.y)) <= 4) { packKin = true; break; }
+      if (packKin || (bi >= 0 && Math.sqrt(bd) < LUNGE_R && Math.random() < LUNGE_P)) {
         const s = snake[bi], dx = s.x - f.x, dy = s.y - f.y;
         d = Math.abs(dx) > Math.abs(dy) ? { x: Math.sign(dx), y: 0 } : { x: 0, y: Math.sign(dy) };
         mode = 'chase';
@@ -1950,7 +2139,7 @@ function stepFoe(f) {
   f.x = nx; f.y = ny;
   f.fx = nx - f.px; f.fy = ny - f.py;
   const speedMul = mode === 'chase' ? .8
-    : mode === 'panic' ? (frenzy ? (f.type === 'brute' ? 1.15 : 1.7) : .85) // brutes shrug off the rush
+    : mode === 'panic' ? (frenzy ? (BREEDS[f.bIdx].hp >= 3 ? 1.15 : 1.7) : .85) // heavyweights shrug off the rush
     : 1;
   const fed = Math.min(f.meals || 0, MEAL_CAP); // well-fed zombies hunt faster (capped)
   f.nextAt = gt + f.moveMs * Math.pow(MEAL_SPEEDUP, fed) * speedMul;
@@ -2087,6 +2276,8 @@ function popScore() { scoreEl.classList.remove('pop'); void scoreEl.offsetWidth;
 
 function showToast(text, opts = {}) {
   toastEl.textContent = text;
+  if (text.length > 16) opts.small = true; // long wave names wrap instead of spilling
+  if (opts.glyph != null) toastEl.innerHTML = `<i class="breed-dot" style="background:hsl(${opts.glyph} 45% 55%)"></i>${text}`;
   toastEl.classList.toggle('pink', !!opts.pink);
   toastEl.classList.toggle('quick', !!opts.quick);
   toastEl.classList.toggle('warn', !!opts.warn);
@@ -2309,16 +2500,31 @@ function drawZombieChar(cx, cy, t, c, o) {
   ctx.save();
   ctx.translate(cx + fx * (chasing ? 1.4 : 0), cy + bob);
   ctx.translate(0, CHAR_PIVOT_Y); ctx.scale(CHAR_SCALE * CHAR_BOOST, CHAR_SCALE * CHAR_BOOST); ctx.translate(0, -CHAR_PIVOT_Y); // enlarge (+ small-screen boost)
-  // ── breed silhouettes — unmistakable at a glance, before any animation ──
-  const breed = c.type || 'walker';
-  if (breed === 'runner') ctx.scale(.72, 1.14);          // whippet-slim, tall
-  else if (breed === 'brute') { const bb = Math.min(1.5, 2.15 / (1.2 * CHAR_BOOST)); ctx.scale(bb, bb * .867); } // a wall of meat — total capped ≈2.15 so phones don't push it into mush
-  else if (breed === 'lunger') ctx.scale(1.06, .9);     // coiled crouch
-  // per-breed gait: stride speed/amplitude and forward lean (render only)
-  const gait = breed === 'runner' ? { spd: 85,  amp: 2.2, lean: .14 }  // sprint, long stride
-             : breed === 'brute'  ? { spd: 285, amp: 1.8, lean: .04 }  // slow, heavy lumber
-             : breed === 'lunger' ? { spd: 150, amp: 1.0, lean: .06 }  // small coiled steps
-             :                      { spd: 110, amp: 1.6, lean: 0 };  // classic shamble
+  // ── breed identity from the ladder table: silhouette, gait, stance ──
+  const b = BREEDS[c.bIdx ?? 0];
+  const ab = b.ab;
+  const miniK = c.mini ? .7 : 1;                          // splitter children are small
+  const capX = 2.15 / (1.2 * CHAR_BOOST);                 // total-scale cap — no cell flooding on phones
+  ctx.scale(Math.min(b.sx, capX) * miniK, Math.min(b.sy, capX) * miniK); // both axes capped — no vertical flooding on phones
+  if (ab.includes('flicker')) ctx.globalAlpha *= .5 + .5 * Math.abs(Math.sin(t / 300 + c.phase)); // shimmering half-there
+  if (c.screamAt && t - c.screamAt < 650) {               // screamer — the shriek rings outward
+    const sk = (t - c.screamAt) / 650;
+    ctx.strokeStyle = `rgba(200,225,255,${(.5 * (1 - sk)).toFixed(2)})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, -2, 8 + 14 * sk, 0, 7); ctx.stroke();
+  }
+  if (c.blinkWarn && t < c.blinkWarn) {                   // blinker — it is about to NOT be there
+    ctx.strokeStyle = `rgba(127,157,201,${(.4 + .4 * Math.abs(Math.sin(t / 60))).toFixed(2)})`;
+    ctx.setLineDash([3, 3]); ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(0, -2, 11, 0, 7); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  // gait from the stat sheet — faster breed, faster feet (anchors keep their tuned feel)
+  const gait = c.bIdx === 1 ? { spd: 85,  amp: 2.2, lean: .14 }
+             : c.bIdx === 3 ? { spd: 285, amp: 1.8, lean: .04 }
+             : c.bIdx === 2 ? { spd: 150, amp: 1.0, lean: .06 }
+             : { spd: Math.max(70, Math.min(290, 70 + (b.moveMs - 96) * .62)),
+                 amp: 1.5 + (340 - b.moveMs) / 140, lean: Math.min(.24, (310 - b.moveMs) / 900) };
   if (c.windup && t < c.windup.until) {                  // lunger: crouch + pulsing alarm
     ctx.scale(1.1, .74);
     ctx.strokeStyle = `rgba(229,72,77,${(.35 + .45 * Math.abs(Math.sin(t / 85))).toFixed(2)})`;
@@ -2339,18 +2545,23 @@ function drawZombieChar(cx, cy, t, c, o) {
   ctx.strokeStyle = '#39443a'; ctx.lineWidth = 3; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(-3, 1.5); ctx.lineTo(-3, 7 + step); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(3, 1.5);  ctx.lineTo(3, 7 - step);  ctx.stroke();
-  // brute/lunger shoulders hunch forward over the planted legs
-  if (breed === 'brute') ctx.translate(fx * 1.7, .9);
-  else if (breed === 'lunger') ctx.translate(fx * 1.2, .5);
+  // heavyweights and dashers hunch forward over the planted legs
+  if (b.hp >= 3) ctx.translate(fx * 1.7, .9);
+  else if (ab.includes('dash')) ctx.translate(fx * 1.2, .5);
   // torso (torn shirt)
   ctx.fillStyle = c.cloth;
   ctx.beginPath(); ctx.roundRect(-5.5, -5, 11, 9, 3); ctx.fill();
-  if (breed === 'brute') { // shoulder hump — the hunched wall
+  if (b.hp >= 3) { // shoulder hump — the hunched wall
     ctx.beginPath(); ctx.arc(0, -4.2, 6.8, Math.PI, 2 * Math.PI); ctx.fill();
   }
-  if (breed === 'lunger') { // orange strike-mark — spot the dasher early
+  if (ab.includes('dash')) { // orange strike-mark — spot the dasher early
     ctx.strokeStyle = '#ff8c42'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(-2.4, -3.6); ctx.lineTo(2.4, -1.4); ctx.stroke();
+  }
+  for (let sp2 = 0; sp2 < b.spikes; sp2++) { // ladder breeds wear their rung on their shoulders
+    const sx3 = -4 + sp2 * 2.7;
+    ctx.fillStyle = c.hair;
+    ctx.beginPath(); ctx.moveTo(sx3, -5); ctx.lineTo(sx3 + .9, -7.6); ctx.lineTo(sx3 + 1.8, -5); ctx.closePath(); ctx.fill();
   }
   // arms reaching toward travel direction (some lost one)
   ctx.strokeStyle = c.skin; ctx.lineWidth = 2.8;
@@ -2364,36 +2575,33 @@ function drawZombieChar(cx, cy, t, c, o) {
   ctx.beginPath(); ctx.arc(0, -8.5, 4.6, 0, 7); ctx.fill();
   ctx.fillStyle = c.hair;
   ctx.beginPath(); ctx.arc(0, -8.5, 4.6, Math.PI * 1.12, Math.PI * 1.88); ctx.closePath(); ctx.fill();
-  if (breed === 'runner') { // amber speed-streak — matches the legend dot
+  if (b.moveMs < 210) { // amber speed-streak — the fast ones wear it
     ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 1.3; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(-1.7, -12.2); ctx.lineTo(1.5, -12.6); ctx.stroke();
   }
-  // face (lungers burn amber — everyone else red)
-  const eyes = breed === 'lunger' ? EYE_GLOW_AMBER : EYE_GLOW;
+  // face — eye count and glow come from the breed table
+  const eyes = glowFor(c.bIdx);
+  const eyePos = b.eyes === 1 ? [[0, -9.2]] : b.eyes === 3 ? [[-2.4, -9.6], [2.4, -9.6], [0, -8.2]] : [[-1.8, -9.3], [1.8, -9.3]];
   if (stunned) {
     ctx.strokeStyle = '#1c261d'; ctx.lineWidth = 1.1;
-    for (const ex of [-1.8, 1.8]) {
+    for (const [ex] of eyePos) {
       ctx.beginPath();
       ctx.moveTo(ex - 1.1, -10); ctx.lineTo(ex + 1.1, -7.8);
       ctx.moveTo(ex + 1.1, -10); ctx.lineTo(ex - 1.1, -7.8);
       ctx.stroke();
     }
   } else if (eating) {
-    // red eyes and a working jaw
-    drawEyeGlow(-1.8, -9.3, eyes);
-    drawEyeGlow(1.8, -9.3, eyes);
+    for (const [ex, ey] of eyePos) drawEyeGlow(ex, ey, eyes);
     const gape = 1 + 1.7 * Math.abs(Math.sin(t / 95));
     ctx.fillStyle = '#1c261d';
     ctx.beginPath(); ctx.arc(0, -6.1, gape, 0, 7); ctx.fill();
   } else if (chasing || o.eyes === 'red' || o.eyes === 'frenzy') {
-    drawEyeGlow(-1.8, -9.3, eyes);
-    drawEyeGlow(1.8, -9.3, eyes);
+    for (const [ex, ey] of eyePos) drawEyeGlow(ex, ey, eyes);
     ctx.strokeStyle = '#1c261d'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(-1.4, -6.2); ctx.lineTo(1.4, -6.6); ctx.stroke();
   } else {
     ctx.fillStyle = '#d8e6c8';
-    ctx.beginPath(); ctx.arc(-1.8, -9.3, .9, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.arc(1.8, -9.3, .9, 0, 7); ctx.fill();
+    for (const [ex, ey] of eyePos) { ctx.beginPath(); ctx.arc(ex, ey, .9, 0, 7); ctx.fill(); }
     ctx.strokeStyle = '#1c261d'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(-1.4, -6.2); ctx.lineTo(1.4, -6.6); ctx.stroke();
   }
@@ -2588,7 +2796,7 @@ function drawFoe(f, t) {
       stunned,
       eating,
       fall: stunned ? clamp01((t - (f.stunUntil - STUN_MS)) / 220) * 1.45 : 0,
-      scale: Math.min(f.type === 'brute' ? BRUTE_MEAL_CAP : MEAL_SCALE_CAP, 1 + MEAL_SCALE * fed),
+      scale: Math.min(BREEDS[f.bIdx].hp >= 3 ? BRUTE_MEAL_CAP : MEAL_SCALE_CAP, 1 + MEAL_SCALE * fed),
     });
   }
 }
@@ -2701,7 +2909,15 @@ function draw(t) {
 
   drawSnake(t);
   drawShots(t);
-  drawParticles(t); drawPops(t);
+  drawParticles(t);
+  for (const zn of zones) { // spitter acid — arms after a beat, hisses out
+    const armed = gt >= zn.armAt, k = armed ? 1 : .45 + .25 * Math.sin(t / 90);
+    ctx.fillStyle = `rgba(125,168,123,${(.16 * k).toFixed(2)})`;
+    ctx.beginPath(); ctx.arc((zn.x + .5) * CELL, (zn.y + .5) * CELL, CELL * .38, 0, 7); ctx.fill();
+    ctx.strokeStyle = `rgba(163,241,96,${(.5 * k).toFixed(2)})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc((zn.x + .5) * CELL, (zn.y + .5) * CELL, CELL * .38 - 1 + (armed ? 0 : 3 * Math.abs(Math.sin(t / 110))), 0, 7); ctx.stroke();
+  } drawPops(t);
 
   // vignette
   ctx.fillStyle = getVignette();
@@ -2732,8 +2948,10 @@ function frame(now) {
   const dt = Math.min(now - last, 100); // clamp hiccups / hidden-tab gaps
   last = now;
 
+  // the death beat (victim fade, gore, hunch) is gt-keyed — keep gt rolling
+  // through 'dying' while everything else stays frozen below
+  if (state === 'playing' || state === 'dying') gt += dt;
   if (state === 'playing') {
-    gt += dt;
     acc += dt;
     let guard = 0;
     while (acc >= stepMs && guard++ < 10) {

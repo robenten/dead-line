@@ -1240,7 +1240,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.14.5'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.14.6'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 /* ═══════════════ the breed ladder — 100 rungs, one per wave ═══════════════
@@ -1397,7 +1397,7 @@ const saveBest = v => { try { localStorage.setItem('svz-best-' + role, String(v)
 /* ═══════════════ audio (Web Audio, all synthesized) ═══════════════ */
 
 const SND = (() => {
-  let ctx = null, master = null, noiseBuf = null, drone = null, muted = false;
+  let ctx = null, master = null, comp = null, noiseBuf = null, drone = null, muted = false;
 
   // AudioContext is only ever created inside a user gesture (see the
   // capture-phase listeners at the bottom). unlock() runs on EVERY gesture:
@@ -1450,7 +1450,14 @@ const SND = (() => {
         ctx = new AC();
         master = ctx.createGain();
         master.gain.value = muted ? 0 : .9;
-        master.connect(ctx.destination);
+        // gentle glue: threshold -18dB / ratio 4 — stacked hits get punch,
+        // not clipping (frenzy + wave + kills at once stay clean)
+        comp = ctx.createDynamicsCompressor();
+        try {
+          comp.threshold.value = -18; comp.knee.value = 24; comp.ratio.value = 4;
+          comp.attack.value = .004; comp.release.value = .16;
+        } catch {}
+        master.connect(comp); comp.connect(ctx.destination);
         ctx.onstatechange = onState;         // iOS interruption / recovery
       }
       if (ctx.state === 'running') { fireReady(); return; }   // gate: no spam once running
@@ -1474,8 +1481,23 @@ const SND = (() => {
 
   function osc(type, f, t){ const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, t); return o; }
 
-  /* one enveloped note: attack → exponential decay, fire-and-forget */
-  function note(type, f0, f1, when, dur, vol, atk = .008, lpF = 0){
+  /* ══ helpers: layered, humanized, placed ══ */
+  const jr = v => v * (1 + (Math.random() * 2 - 1) * .07);   // ±7% pitch — no machine-gun repetition
+  const jt = v => Math.max(0, v + (Math.random() * 2 - 1) * .012); // ±12ms micro-timing
+  function panOut(head, x){                                    // board-x (cells) → stereo
+    try {
+      if (x != null && ctx.createStereoPanner) {
+        const p = ctx.createStereoPanner();
+        p.pan.value = Math.max(-.75, Math.min(.75, (x / 24 - .5) * 1.5));
+        head.connect(p); head = p;
+      }
+    } catch {}
+    head.connect(master);
+  }
+
+  /* one enveloped note: attack → exponential decay, fire-and-forget.
+     Returns the oscillator so callers can cancel (power-drive). */
+  function note(type, f0, f1, when, dur, vol, atk = .008, lpF = 0, x){
     const t = ctx.currentTime + when;
     const o = osc(type, f0, t);
     if (f1) o.frequency.exponentialRampToValueAtTime(Math.max(24, f1), t + dur);
@@ -1489,114 +1511,156 @@ const SND = (() => {
       f.type = 'lowpass'; f.frequency.value = lpF;
       g.connect(f); head = f;
     }
-    o.connect(g); head.connect(master);
+    o.connect(g);
+    panOut(head, x);
     o.start(t); o.stop(t + dur + .05);
+    return o;
   }
 
-  /* filtered noise burst with a sweeping lowpass */
-  function hiss(when, dur, vol, f0, f1){
-    const t = ctx.currentTime + when;
+  function noiseSrc(){
     if (!noiseBuf) {
       noiseBuf = ctx.createBuffer(1, ctx.sampleRate * .5 | 0, ctx.sampleRate);
       const d = noiseBuf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     }
-    const n = ctx.createBufferSource(); n.buffer = noiseBuf;
-    const f = ctx.createBiquadFilter(); f.type = 'lowpass';
+    const n = ctx.createBufferSource(); n.buffer = noiseBuf; return n;
+  }
+
+  /* noise transient — the snap in front of a body */
+  function crack(when, vol, x){
+    const t = ctx.currentTime + when;
+    const n = noiseSrc();
+    const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 1800;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(.0006, t + .03);
+    n.connect(f).connect(g); panOut(g, x);
+    n.start(t); n.stop(t + .05);
+  }
+
+  /* filtered noise burst with a sweeping filter (lowpass by default) */
+  function hiss(when, dur, vol, f0, f1, x, type = 'lowpass'){
+    const t = ctx.currentTime + when;
+    const n = noiseSrc();
+    const f = ctx.createBiquadFilter(); f.type = type;
     f.frequency.setValueAtTime(f0, t);
     f.frequency.exponentialRampToValueAtTime(Math.max(40, f1), t + dur);
     const g = ctx.createGain();
     g.gain.setValueAtTime(vol, t);
     g.gain.exponentialRampToValueAtTime(.0006, t + dur);
-    n.connect(f).connect(g).connect(master);
+    n.connect(f).connect(g); panOut(g, x);
     n.start(t); n.stop(t + dur + .02);
   }
 
-  /* ── the palette (short, quiet, arcade-flavored) ── */
+  /* ── the palette: every sound = transient + body (+ tail), humanized, placed ── */
 
   function ui(){ if (!live()) return; try {                      // confirm tap
-    note('sine', 1180, 0, 0, .05, .04);
-    note('sine', 1560, 0, .03, .045, .026);
+    const f = jr(1180);
+    crack(0, .02);
+    note('sine', f, 0, 0, .05, .035);
+    note('triangle', f * 2, 0, jt(.028), .045, .02);
   } catch {} }
 
-  function blip(){ if (!live()) return; try {                    // recruit joins
-    note('triangle', 620, 930, 0, .09, .07);
-    note('triangle', 930, 1240, .07, .09, .05);
+  function blip(x){ if (!live()) return; try {                   // recruit joins
+    const f = jr(660);
+    crack(0, .018, x);
+    note('triangle', f, f * 1.5, 0, .09, .07, .006, 0, x);
+    note('sine', f * 1.5, f * 2, jt(.06), .08, .045, .006, 0, x);
+    note('sine', f * 3, 0, jt(.1), .05, .015, .004);              // sparkle partial
   } catch {} }
 
-  function kill(v = 1, breed){ if (!live()) return; try {              // headbutt / kill
-    // phone speakers reproduce almost nothing below ~400Hz — every variant
-    // keeps a mid body (triangle/saw harmonics) alongside the low thump
+  function kill(v = 1, breed, x){ if (!live()) return; try {     // headbutt / kill
+    crack(0, .05 * v, x);                                        // transient snap
     if (breed === 'runner') {       // lighter, higher — it goes down easy
-      note('triangle', 480, 200, 0, .11, .11 * v);
-      hiss(0, .08, .05 * v, 2000, 300);
+      note('triangle', jr(520), 220, 0, .11, .11 * v, .004, 0, x);
+      hiss(0, .08, .05 * v, 2400, 380, x);
     } else if (breed === 'brute') { // a deeper, heavier collapse
-      note('triangle', 240, 80, 0, .22, .15 * v);
-      hiss(0, .18, .1 * v, 900, 80);
-      note('square', 150, 95, 0, .18, .05 * v, .006, 900);   // low-mid grumble
-    } else {
-      note('triangle', 330, 110, 0, .16, .13 * v);           // mid thump
-      hiss(0, .13, .09 * v, 1400, 150);                      // crunch
-      note('sawtooth', 480, 240, 0, .07, .045 * v, .006, 1800); // chomp bite
+      note('triangle', jr(260), 85, 0, .22, .15 * v, .006, 0, x);
+      note('sawtooth', jr(130), 95, .005, .18, .05 * v, .006, 900, x);
+      hiss(0, .18, .1 * v, 1000, 90, x);
+    } else {                        // the classic: snap + thump + crunch
+      note('sawtooth', jr(390), 150, .008, .09, .05 * v, .004, 1800, x);
+      note('triangle', jr(330), 110, 0, .16, .13 * v, .005, 0, x);
+      hiss(0, .13, .09 * v, 1500, 160, x);
     }
   } catch {} }
 
-  function hit(){ if (!live()) return; try {                    // brute soaks a hit
-    note('triangle', 520, 180, 0, .08, .07);
-    note('square', 210, 150, 0, .1, .04, .006, 1200);
+  function hit(x){ if (!live()) return; try {                    // a soaked hit — clank
+    crack(0, .04, x);
+    note('triangle', jr(520), 180, 0, .08, .06, .004, 0, x);
+    note('square', jr(215), 150, 0, .1, .035, .006, 1200, x);
+    note('square', jr(1830), 0, jt(.012), .05, .02, .003, 2600, x); // metallic ring
   } catch {} }
 
-  function lungeWarn(){ if (!live()) return; try {              // lunger wind-up cue
-    note('sine', 640, 980, 0, .09, .045);
-    note('sine', 960, 1440, .05, .08, .035);
+  function lungeWarn(x){ if (!live()) return; try {              // lunger wind-up cue
+    const f = jr(640);
+    note('sine', f, f * 1.53, 0, .09, .045, .006, 0, x);
+    note('sine', f * 1.5, f * 2.25, jt(.05), .08, .035, .006, 0, x);
+    note('sine', f * 2.4, 0, jt(.1), .05, .018, .004);           // tension partial
   } catch {} }
 
-  function hurt(){ if (!live()) return; try {                   // a catch on the chain
-    note('square', 480, 330, 0, .1, .045, .006, 1900);
-    note('square', 260, 170, .06, .12, .05, .006, 1500);
+  function hurt(x){ if (!live()) return; try {                  // a catch on the chain
+    crack(0, .03, x);
+    note('square', jr(480), 330, 0, .1, .045, .006, 1900, x);
+    note('square', jr(260), 170, .06, .12, .05, .006, 1500, x);
+    note('sawtooth', jr(700), 340, .02, .09, .02, .006, 2400, x); // growl edge
   } catch {} }
 
-  function wave(){ if (!live()) return; try {                    // wave horn
-    // an octave up from the original G2 chord, so the saw harmonics reach
-    // 500–900Hz — audible on a phone, still a dark graveyard horn
-    note('sawtooth', 196, 0, 0, .45, .055, .04, 900);
-    note('sawtooth', 294, 0, .02, .42, .042, .04, 900);
-    note('sawtooth', 392, 0, .04, .4, .028, .04, 900);
+  function wave(){ if (!live()) return; try {                    // wave horn + approach whoosh
+    hiss(0, .32, .028, 300, 2600, 2, 'bandpass');                // sweep in from the left
+    hiss(.04, .3, .028, 2200, 320, 22, 'bandpass');              // and past to the right
+    const g2 = [196, 294, 392, 588];
+    g2.forEach((f, i) => note('sawtooth', jr(f), 0, i * .018, .42 - i * .04, .05 - i * .008, .04, 900)); // strummed
   } catch {} }
 
-  function scatter(){ if (!live()) return; try { // the cut line — screams, running feet
-    note('square', 1240, 830, 0, .1, .04, .006, 2400);
-    note('square', 930, 620, .09, .12, .038, .006, 2000);
+  function scatter(x){ if (!live()) return; try { // the cut line — screams, running feet
+    note('square', jr(1240), 830, 0, .1, .035, .006, 2400, x);
+    note('square', jr(930), 620, jt(.09), .12, .032, .006, 2000, x);
+    for (let i = 0; i < 3; i++)                                   // panic chatter
+      note('sine', jr(1400 + Math.random() * 600), 0, jt(.05 + i * .045), .045, .016, .004, 0, x + (i - 1) * 3);
   } catch {} }
 
-  function frenzy(){ if (!live()) return; try {                  // weapon rush
+  function frenzy(){ if (!live()) return; try {                  // FIGHT BACK — the highlight
+    driveStop();                                                  // no stacked drive layers
+    crack(0, .05);
     const arp = [523.25, 659.25, 880, 1318.5];
-    arp.forEach((f, i) => note('triangle', f, 0, i * .055, .12, .055));
-    note('sine', 500, 1600, 0, .45, .025);
+    arp.forEach((f, i) => note('sawtooth', f, 0, i * .05, .12, .05, .006, 2600)); // brass snap
+    note('sine', 500, 1800, 0, .4, .03);                          // riser
+    // driving pulse for the whole 6s window — scheduled up-front (events,
+    // not per-frame), self-ending, cancelled clean on death/expiry
+    const t0 = .3, beat = .16, n = Math.floor(5.7 / beat);
+    for (let i = 0; i < n; i++) {
+      drive.push(note('sine', 175, 62, t0 + i * beat, .1, .024, .003, 520));
+      if (i % 2 === 1) drive.push(note('square', 660, 660, t0 + i * beat + .07, .035, .011, .002, 1400));
+    }
   } catch {} }
 
-  function death(){ if (!live()) return; try {                   // run over
-    note('sawtooth', 300, 60, 0, .7, .09, .012, 1100);
+  function driveStop(){ for (const o of drive) { try { o.stop(); } catch {} } drive = []; }
+
+  function death(){ driveStop(); if (!live()) return; try {      // run over
+    crack(0, .07);                                                // impact
     hiss(0, .5, .06, 1200, 150);
-    note('square', 660, 330, .04, .5, .035, .012, 2200);  // audible falling wail (phones)
+    note('sawtooth', jr(300), 60, 0, .7, .09, .012, 1100);
+    note('sawtooth', jr(305), 61, .01, .68, .05, .012, 900);     // detuned twin — wobble
+    note('square', 660, 330, .04, .5, .035, .012, 2200);          // falling wail (phones)
+    note('triangle', jr(220), 90, .14, .4, .03, .02, 800);        // tail thud
   } catch {} }
 
-  function best(){ if (!live()) return; try {                    // new record (lands after the death fall)
-    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) =>
-      note('sine', f, 0, .55 + i * .09, .14, .06, .01));
+  function best(){ if (!live()) return; try {                    // new record
+    const f = 523.25;
+    [1, 1.25, 1.5, 2].forEach((m, i) => note('sine', jr(f * m), 0, .55 + i * .088, .14, .055, .01));
+    note('sine', f * 4, 0, .55 + .35, .3, .014, .02);             // final shimmer
+    hiss(.55 + .05, .18, .012, 3000, 6000, null, 'bandpass');
   } catch {} }
 
-  /* ── ambient graveyard drone (only while playing) ── */
+  /* ── ambient graveyard drone (only while playing) — it breathes now ── */
 
   function droneStart(){
     if (!ctx || muted || drone) return;
     try {
       const t = ctx.currentTime;
       const out = ctx.createGain(); out.gain.value = 0;
-      // mid-register pad (A2/E3/A3 + detune): the triangle harmonics at
-      // 330–660Hz carry it on phone speakers, the low fundamentals keep it
-      // a graveyard hum on real ones. Lowpass lets the harmonics through.
-      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 750; lp.Q.value = .4;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 620; lp.Q.value = .4;
       const mix = ctx.createGain(); mix.gain.value = .8;
       const o1 = osc('triangle', 110, t);
       const o2 = osc('triangle', 164.81, t); o2.detune.value = 7;   // a grumbly fifth
@@ -1606,9 +1670,35 @@ const SND = (() => {
       const lfo = osc('sine', .07, t);                             // slow breathing
       const lfoG = ctx.createGain(); lfoG.gain.value = .3;
       lfo.connect(lfoG).connect(mix.gain);
-      o1.start(t); o2.start(t); o3.start(t); lfo.start(t);
+      const lfo2 = osc('sine', .045, t);                           // slow filter drift
+      const lfo2G = ctx.createGain(); lfo2G.gain.value = 190;
+      lfo2.connect(lfo2G).connect(lp.frequency);
+      o1.start(t); o2.start(t); o3.start(t); lfo.start(t); lfo2.start(t);
       out.gain.setTargetAtTime(.05, t, 1.2);
-      const nodes = [o1, o2, o3, lfo];
+      const nodes = [o1, o2, o3, lfo, lfo2];
+      // distant moans — a few quiet calls drifting across the yard
+      const moans = [];
+      for (let m = 0; m < 4; m++) {
+        const mt = 6 + m * (9 + Math.random() * 6), mf = 128 + Math.random() * 46;
+        const mo = osc('sine', mf, t + mt); mo.frequency.exponentialRampToValueAtTime(mf * .78, t + mt + 1.6);
+        const mo2 = osc('sine', mf * 1.007, t + mt); mo2.frequency.exponentialRampToValueAtTime(mf * .78, t + mt + 1.5);
+        const mg = ctx.createGain();
+        mg.gain.setValueAtTime(0, t + mt);
+        mg.gain.linearRampToValueAtTime(.017, t + mt + .5);
+        mg.gain.exponentialRampToValueAtTime(.0006, t + mt + 1.7);
+        let mh = mg;
+        try {
+          if (ctx.createStereoPanner) {
+            const mp = ctx.createStereoPanner();
+            mp.pan.value = Math.random() * 1.2 - .6;
+            mg.connect(mp); mh = mp;
+          }
+        } catch {}
+        mo.connect(mg); mo2.connect(mg); mh.connect(master);
+        mo.start(t + mt); mo2.start(t + mt);
+        mo.stop(t + mt + 1.8); mo2.stop(t + mt + 1.8);
+        moans.push(mo, mo2);
+      }
       drone = { stop(){
         try {
           const e = ctx.currentTime;
@@ -1621,8 +1711,10 @@ const SND = (() => {
 
   function droneStop(){ if (!drone) return; try { drone.stop(); } catch {} drone = null; }
 
-  return { unlock, setMuted, onReady: cb => { readyCb = cb; }, ui, blip, kill, hit, hurt, lungeWarn, wave, frenzy, death, best, droneStart, droneStop, scatter };
+  let drive = [];    // oscillators of the FIGHT BACK drive layer — cancelled on death/expiry
+  return { unlock, setMuted, onReady: cb => { readyCb = cb; }, ui, blip, kill, hit, hurt, lungeWarn, wave, frenzy, death, best, droneStart, droneStop, scatter, driveStop };
 })();
+;
 
 /* ═══════════════ state ═══════════════ */
 
@@ -1768,7 +1860,7 @@ function step() {
         const lost = Math.min(1, snake.length - 1);
         for (let l = 0; l < lost; l++) { snake.pop(); roster.pop(); }
         burst((zn.x + .5) * CELL, (zn.y + .5) * CELL, ['#7da87b', '#a3f160'], 8);
-        hurtAt = gt + 350; shake('md'); SND.hurt();
+        hurtAt = gt + 350; shake('md'); SND.hurt(f.x);
         if (snake.length < SNAKE_MIN) { die('picked'); return; }
         break;
       }
@@ -1799,7 +1891,7 @@ function killFoe(f, pts) { // shared by headbutts, fighter saves and hunter shot
     f.stunUntil = Math.max(f.stunUntil, gt + 500);
     f.windup = null; f.lunge = null;
     shake('sm');
-    SND.hit();
+    SND.hit(f.x);
     updateHud();
     return;
   }
@@ -1821,7 +1913,7 @@ function killFoe(f, pts) { // shared by headbutts, fighter saves and hunter shot
   stains.push({ x: f.x, y: f.y, seed: (Math.random() * 1e9) | 0, bornAt: gt });
   if (stains.length > 30) stains.shift();
   shake('sm');
-  SND.kill(1, kb.hp >= 3 ? 'brute' : kb.moveMs < 210 ? 'runner' : null);
+  SND.kill(1, kb.hp >= 3 ? 'brute' : kb.moveMs < 210 ? 'runner' : null, f.x);
   updateHud();
 }
 
@@ -1841,7 +1933,7 @@ function devour(i) { // the leader runs into a foe — whose funeral depends on 
   f.stunUntil = gt + 1300;
   f.eat = { until: gt + EAT_MS, x: f.x, y: f.y, fx: f.fx, fy: f.fy, char: roster[0], nextGore: gt + 100 };
   burst((f.x + .5) * CELL, (f.y + .5) * CELL, [roster[0].skin, roster[0].cloth, '#7a1f2b'], 14);
-  SND.hurt();
+  SND.hurt(f.x);
   shake('md');
   overTimer = setTimeout(() => die('head'), 1250); // let the meal land before the card
 }
@@ -1850,7 +1942,7 @@ function recruit(i) { // touch a wanderer with your head — they join the tail
   const a = allies[i];
   allies.splice(i, 1);
   score += 10;
-  SND.blip();
+  SND.blip(a.x);
   pending.push({ cls: a.cls, skin: a.skin, hair: a.hair, cloth: a.cloth, arms: 2, phase: a.phase });
   burst((a.x + .5) * CELL, (a.y + .5) * CELL, RUSH_P, 8);
   updateHud();
@@ -1887,8 +1979,8 @@ function bite(f, idx) {
     }
   }
   const caughtChar = roster[idx] || makeChar(role);
-  SND.hurt();
-  SND.scatter(); // the cut — screams and running feet
+  SND.hurt(f.x);
+  SND.scatter(f.x); // the cut — screams and running feet
   // bite rule: the caught character (plus bite−1 behind it) is devoured on the
   // spot; EVERYONE beyond the bite point breaks from the line and scatters as
   // panicking wanderers — gather them again before the horde does
@@ -2088,7 +2180,7 @@ function updateFoes() {
         const seg = snake[1 + Math.floor(Math.random() * Math.max(1, snake.length - 1))] || head;
         zones.push({ x: seg.x, y: seg.y, bornAt: gt, armAt: gt + 600, until: gt + 3400 });
         f.nextSpitAt = gt + SPIT_MS;
-        SND.lungeWarn();
+        SND.lungeWarn(f.x);
       }
     }
     // blinker — a shimmer, then it is suddenly closer
@@ -2179,7 +2271,7 @@ function stepFoe(f) {
         f.windup = { until: gt + LUNGER_WINDUP, dx: sdx, dy: sdy };
         f.mode = 'windup';
         f.nextAt = f.windup.until; f.stepDur = LUNGER_WINDUP;
-        SND.lungeWarn();
+        SND.lungeWarn(f.x);
         return;
       }
     }
@@ -2311,7 +2403,7 @@ function tryShoot(shooter, x, y) { // hunters — hitscan on the nearest zombie 
 function eatWanderer(f, ai) { // zombies eat unrecruited wanderers too — urgency
   const a = allies[ai];
   allies.splice(ai, 1);
-  SND.kill(.45);
+  SND.kill(.45, null, f.x);
   f.meals = (f.meals || 0) + 1;
   f.stunUntil = gt + EAT_MS;
   f.eat = { until: gt + EAT_MS, x: f.x, y: f.y, fx: f.fx, fy: f.fy, char: a, nextGore: gt + 120 };

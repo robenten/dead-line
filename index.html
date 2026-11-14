@@ -363,6 +363,7 @@
   .d-bite{ background:var(--danger); box-shadow:0 0 8px rgba(229,72,77,.6); }
   .d-run{ background:#ffd166; box-shadow:0 0 8px rgba(255,209,102,.6); }
   .d-lunge{ background:#ff8c42; box-shadow:0 0 8px rgba(255,140,66,.6); }
+  .d-cut{ background:#e5b84b; box-shadow:0 0 8px rgba(229,184,75,.55); }
   .d-fight{ background:#d8443f; box-shadow:0 0 8px rgba(216,68,63,.6); }
   .d-hunt{ background:#5ac8b0; box-shadow:0 0 8px rgba(90,200,176,.6); }
 
@@ -767,7 +768,8 @@ const I18N = {
     lg3: 'Hunters snipe the nearest zombie, on a cooldown',
     lg4: 'Medics slowly regrow lost recruits, up to your peak',
     lg5: 'Touch a zombie unpowered and it devours your leader — a weapon turns the tables',
-    lg6: 'Every wave unleashes a new, worse breed — watch the toast'
+    lg6: 'Every wave unleashes a new, worse breed — watch the toast',
+    lg7: 'A bite cuts the line — those behind scatter. Gather them before the horde does'
     
     
     
@@ -808,7 +810,8 @@ const I18N = {
     lg3: 'ハンターは最寄りのゾンビを狙撃（クールダウン制）',
     lg4: 'メディックは失った仲間を少しずつ再生',
     lg5: '無強化でゾンビに触れるとリーダーが食われる — 武器で反撃せよ',
-    lg6: '毎波、新しく凶悪な種族が現れる — 通知に注意'
+    lg6: '毎波、新しく凶悪な種族が現れる — 通知に注意',
+    lg7: '噛みつかれると列は寸断される — 後ろの仲間は四散する。取り戻せ'
     
     
     
@@ -849,7 +852,8 @@ const I18N = {
     lg3: '猎人冷却完毕就狙杀最近的丧尸',
     lg4: '医师会慢慢补回失去的队员，直到峰值',
     lg5: '无强化时碰到丧尸，队长会被吞掉——拾取武器反击',
-    lg6: '每一波都会出现更凶残的新种类——留意提示'
+    lg6: '每一波都会出现更凶残的新种类——留意提示',
+    lg7: '被咬断队列时，后方的人会四散奔逃——趁丧尸动手前把他们找回来'
     
     
     
@@ -890,7 +894,8 @@ const I18N = {
     lg3: '獵人冷卻完畢就狙殺最近的殭屍',
     lg4: '醫護會慢慢補回失去的隊員，直到峰值',
     lg5: '無強化時碰到殭屍，隊長會被吞掉——拾取武器反擊',
-    lg6: '每一波都會出現更凶殘的新種類——留意提示'
+    lg6: '每一波都會出現更凶殘的新種類——留意提示',
+    lg7: '被咬斷隊列時，後方的人會四散奔逃——趁殭屍動手前把他們找回來'
     
     
     
@@ -931,7 +936,8 @@ const I18N = {
     lg3: 'Los cazadores disparan al zombi más cercano, con recarga',
     lg4: 'Los médicos recuperan poco a poco a tus reclutas, hasta tu máximo',
     lg5: 'Tocar un zombi sin poder te devora al líder — un arma lo cambia todo',
-    lg6: 'Cada oleada trae una raza nueva y peor — mira el aviso'
+    lg6: 'Cada oleada trae una raza nueva y peor — mira el aviso',
+    lg7: 'Una mordida corta la fila — los de atrás huyen. Reúnelos antes que la horda'
     
     
     
@@ -972,7 +978,8 @@ const I18N = {
     lg3: 'Les chasseurs tirent sur le zombie le plus proche, avec rechargement',
     lg4: 'Les médecins font revenir peu à peu tes recrues, jusqu’à ton record',
     lg5: 'Toucher un zombie sans pouvoir dévore ton chef — une arme renverse tout',
-    lg6: 'Chaque vague amène une race pire — regarde l’annonce'
+    lg6: 'Chaque vague amène une race pire — regarde l’annonce',
+    lg7: 'Une morsure coupe la file — ceux de derrière fuient. Récupère-les avant la horde'
     
     
     
@@ -1013,7 +1020,8 @@ const I18N = {
     lg3: 'Jäger schießen den nächsten Zombie ab, mit Abklingzeit',
     lg4: 'Sanitäter lassen verlorene Rekruten langsam zurückwachsen',
     lg5: 'Zombie ohne Power berühren verschlingt deinen Anführer — die Waffe dreht den Spieß',
-    lg6: 'Jede Welle bringt eine neue, schlimmere Brut — achte auf den Hinweis'
+    lg6: 'Jede Welle bringt eine neue, schlimmere Brut — achte auf den Hinweis',
+    lg7: 'Ein Biss schneidet die Kette — die dahinter fliehen. Sammle sie ein, bevor es die Horde tut'
     
     
     
@@ -1054,7 +1062,8 @@ const I18N = {
     lg3: '사수는 쿨다운마다 가장 가까운 좀비를 저격',
     lg4: '의무병은 잃은 대원을 서서히 되살린다',
     lg5: '무강화 상태로 좀비에 닿으면 대장이 잡아먹힌다 — 무기로 반격',
-    lg6: '매 파도마다 더 흉악한 새 종족이 나타난다 — 알림을 주목하라'
+    lg6: '매 파도마다 더 흉악한 새 종족이 나타난다 — 알림을 주목하라',
+    lg7: '물리면 대열이 끊긴다 — 뒤의 사람들은 흩어진다. 무리가 먹기 전에 모아 들여라'
     
     
     
@@ -1180,7 +1189,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.14.3'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.14.4'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 /* ═══════════════ the breed ladder — 100 rungs, one per wave ═══════════════
@@ -1504,6 +1513,11 @@ const SND = (() => {
     note('sawtooth', 392, 0, .04, .4, .028, .04, 900);
   } catch {} }
 
+  function scatter(){ if (!live()) return; try { // the cut line — screams, running feet
+    note('square', 1240, 830, 0, .1, .04, .006, 2400);
+    note('square', 930, 620, .09, .12, .038, .006, 2000);
+  } catch {} }
+
   function frenzy(){ if (!live()) return; try {                  // weapon rush
     const arp = [523.25, 659.25, 880, 1318.5];
     arp.forEach((f, i) => note('triangle', f, 0, i * .055, .12, .055));
@@ -1556,7 +1570,7 @@ const SND = (() => {
 
   function droneStop(){ if (!drone) return; try { drone.stop(); } catch {} drone = null; }
 
-  return { unlock, setMuted, onReady: cb => { readyCb = cb; }, ui, blip, kill, hit, hurt, lungeWarn, wave, frenzy, death, best, droneStart, droneStop };
+  return { unlock, setMuted, onReady: cb => { readyCb = cb; }, ui, blip, kill, hit, hurt, lungeWarn, wave, frenzy, death, best, droneStart, droneStop, scatter };
 })();
 
 /* ═══════════════ state ═══════════════ */
@@ -1614,7 +1628,7 @@ const foeFaction = () => 'zombie'; // human-only — the enemy is always the hor
 /* ═══════════════ role select ═══════════════ */
 
 function humanLegend() {
-  const dots = ['hum', 'fight', 'hunt', 'med', 'bite', 'run'];
+  const dots = ['hum', 'fight', 'hunt', 'med', 'bite', 'run', 'cut'];
   return dots.map((d, i) => `<li><i class="dot d-${d}"></i><span>${t('lg' + (i + 1))}</span></li>`).join('');
 }
 function applyRoleSkin() {
@@ -1823,15 +1837,32 @@ function bite(f, idx) {
   }
   const caughtChar = roster[idx] || makeChar(role);
   SND.hurt();
-  const lost = Math.min(BREEDS[f.bIdx].bite, snake.length - 1);
-  for (let k = 0; k < lost; k++) {
-    const t = snake[snake.length - 1];
-    burst((t.x + .5) * CELL, (t.y + .5) * CELL, ROT, 8);
-    stains.push({ x: t.x, y: t.y, seed: (Math.random() * 1e9) | 0, bornAt: gt });
-    snake.pop();
+  SND.scatter(); // the cut — screams and running feet
+  // bite rule: the caught character (plus bite−1 behind it) is devoured on the
+  // spot; EVERYONE beyond the bite point breaks from the line and scatters as
+  // panicking wanderers — gather them again before the horde does
+  const kb = BREEDS[f.bIdx];
+  const dev = Math.min(kb.bite, snake.length - idx);
+  for (let j = snake.length - 1; j >= idx + dev; j--) {
+    const s2 = snake[j], c2 = roster[j];
+    allies.push({
+      x: s2.x, y: s2.y, px: s2.x, py: s2.y,
+      fx: 0, fy: 1, dir: pick(CARD), mode: 'panic', cls: c2.cls,
+      skin: c2.skin, hair: c2.hair, cloth: c2.cloth, arms: c2.arms, phase: c2.phase,
+      moveMs: 230 + Math.random() * 60,
+      nextAt: gt + 200 + Math.random() * 400, lastMoveAt: gt, stepDur: 400,
+      stunUntil: 0, nextShot: 0, panicUntil: gt + 2800,
+    });
+    burst((s2.x + .5) * CELL, (s2.y + .5) * CELL, [c2.skin, c2.cloth], 8);
+  }
+  // the extra devoured behind the catch go down in the scuffle
+  for (let j = idx + 1; j < idx + dev; j++) {
+    burst((snake[j].x + .5) * CELL, (snake[j].y + .5) * CELL, [roster[j].skin, '#7a1f2b'], 10);
+    stains.push({ x: snake[j].x, y: snake[j].y, seed: (Math.random() * 1e9) | 0, bornAt: gt });
   }
   if (stains.length > 30) stains.shift();
-  roster.length = snake.length;
+  snake.length = idx;
+  roster.length = idx;
   prevSnake = snake.map(s => ({ ...s })); // freeze the glide; gore covers the snap
 
   {
@@ -1851,8 +1882,7 @@ function bite(f, idx) {
   }
 
   hurtAt = gt + 350;
-  shake(BREEDS[f.bIdx].hp >= 3 ? 'lg' : 'md'); // a heavyweight bite rocks the whole board
-  if (snake.length < SNAKE_MIN) { die('picked'); return; }
+  shake(kb.hp >= 3 ? 'lg' : 'md'); // a heavyweight bite rocks the whole board
   updateHud();
 }
 
@@ -2181,7 +2211,10 @@ function stepAlly(a) {
   }
   const head = snake[0];
   let d;
-  if (zd < ALLY_FLEE_R) {
+  if (gt < (a.panicUntil || 0)) {
+    d = awayFrom({ x: zx, y: zy }, a); // freshly scattered — bolt first, think later
+    a.mode = 'panic';
+  } else if (zd < ALLY_FLEE_R) {
     d = awayFrom({ x: zx, y: zy }, a); // bolt from the dead
     a.mode = 'panic';
   } else if (Math.max(Math.abs(head.x - a.x), Math.abs(head.y - a.y)) < ALLY_BEACON) {
@@ -2207,7 +2240,7 @@ function stepAlly(a) {
   if (!moved) { a.nextAt = gt + 150; return; }
   a.px = a.x; a.py = a.y; a.x = nx; a.y = ny;
   a.fx = nx - a.px; a.fy = ny - a.py;
-  a.nextAt = gt + a.moveMs * (a.mode === 'panic' ? .85 : a.mode === 'jog' ? .9 : 1);
+  a.nextAt = gt + a.moveMs * (gt < (a.panicUntil || 0) ? .6 : a.mode === 'panic' ? .85 : a.mode === 'jog' ? .9 : 1);
   a.stepDur = a.nextAt - gt;
 }
 

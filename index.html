@@ -63,6 +63,7 @@
   }
 
   *{ box-sizing:border-box; margin:0; padding:0; }
+  [hidden]{ display:none !important; } /* author display rules (.btn) must not un-hide */
   html,body{ height:100%; }
   html{ overscroll-behavior:none; }            /* no scroll chaining / pull-to-refresh */
   body{
@@ -708,6 +709,13 @@
           </svg>
           <span data-t="shareBtn">Share</span>
         </button>
+        <button class="btn btn--ghost" id="btn-savecard" hidden>
+          <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true">
+            <path d="M7 1.6v6.8m0 0L4.3 5.7m2.7 2.7 2.7-2.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2.6 9.6v1.1c0 .7.6 1.3 1.3 1.3h6.2c.7 0 1.3-.6 1.3-1.3V9.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span data-t="saveCard">Save card</span>
+        </button>
         <p class="ov-hint key-only" data-t="overHintKeys">press <kbd>R</kbd> to replay</p>
         <p class="ov-hint touch-only" data-t="overHintTouch">tap to replay</p>
       </div>
@@ -735,7 +743,7 @@
 /* ═══════════════ setup ═══════════════ */
 
 const canvas = document.getElementById('board');
-const ctx    = canvas.getContext('2d');
+let ctx      = canvas.getContext('2d'); // let: the share card reuses the character renderer on its own canvas
 const $      = id => document.getElementById(id);
 const scoreEl = $('score'), waveEl = $('wave'), killsEl = $('kills'), bestEl = $('best');
 const frameEl = $('frame');
@@ -744,6 +752,7 @@ const overTitle = $('over-title'), finalScore = $('final-score'),
       overStats = $('over-stats'), overBest = $('over-best'), pillBest = $('pill-best');
 const btnPause  = $('btn-pause');
 const btnMute   = $('btn-mute');
+const btnSaveCard = $('btn-savecard');
 const toastEl   = $('toast'), frenzyEl = $('frenzy'), frenzyFill = $('frenzy-fill'), frenzyLabel = $('frenzy-label');
 const readyTitle = $('ready-title'), readyText = $('ready-text'),
       legendEl = $('legend'), btnStartLabel = $('btn-start-label');
@@ -771,6 +780,8 @@ const I18N = {
     finalScore: 'Final score', statsOne: '1 kill · wave {w}', statsMany: '{k} kills · wave {w}',
     overBest: 'Best {v}', newBest: 'New best', restart: 'Run it back',
     shareBtn: 'Share', shareCopied: 'Copied — paste it anywhere',
+    saveCard: 'Save card', cardSaved: 'Card saved — attach it anywhere',
+    cardCta: 'Think you can outlast me?',
     shareText: 'I survived to wave {n} with {score} pts and {kills} kills in DEAD LINE — graveyard shift. Can you outlast me?',
     shareTextBest: 'New best in DEAD LINE — graveyard shift! Wave {n}, {score} pts, {kills} kills. Think you can outlast me?',
     shareGame: 'DEAD LINE — graveyard shift. Every wave brings a new, worse breed. Think you can outlast me?',
@@ -817,6 +828,8 @@ const I18N = {
     finalScore: '最終スコア', statsOne: '撃破 1 · 第{w}波', statsMany: '撃破 {k} · 第{w}波',
     overBest: '最高 {v}', newBest: '新記録！', restart: 'もう一回',
     shareBtn: 'シェア', shareCopied: 'コピーしました — どこにでも貼ろう',
+    saveCard: 'カードを保存', cardSaved: 'カードを保存しました',
+    cardCta: '君に越えられるかな？',
     shareText: 'DEAD LINE — 墓場の夜番。ウェーブ{n}まで{score}ポイント・{kills}キルで生き延びた。君に越えられるかな？',
     shareTextBest: 'DEAD LINE — 墓場の夜番で新記録！ウェーブ{n}・{score}ポイント・{kills}キル。君に越えられるかな？',
     shareGame: 'DEAD LINE — 墓場の夜番。ウェーブごとに新たな厄介な奴が現れる。君に越えられるかな？',
@@ -863,6 +876,8 @@ const I18N = {
     finalScore: '最终得分', statsOne: '击杀 1 · 第{w}波', statsMany: '击杀 {k} · 第{w}波',
     overBest: '最高 {v}', newBest: '新纪录！', restart: '再来一局',
     shareBtn: '分享', shareCopied: '已复制——随处粘贴',
+    saveCard: '保存卡片', cardSaved: '卡片已保存',
+    cardCta: '你能撑得更久吗？',
     shareText: '我在《DEAD LINE——墓园夜班》活到了第{n}波，{score}分、{kills}杀。你能撑得更久吗？',
     shareTextBest: '《DEAD LINE——墓园夜班》新纪录！第{n}波、{score}分、{kills}杀。你能撑得更久吗？',
     shareGame: '《DEAD LINE——墓园夜班》——每一波都有更凶的新变种。你能撑得更久吗？',
@@ -909,6 +924,8 @@ const I18N = {
     finalScore: '最終得分', statsOne: '擊殺 1 · 第{w}波', statsMany: '擊殺 {k} · 第{w}波',
     overBest: '最高 {v}', newBest: '新紀錄！', restart: '再來一局',
     shareBtn: '分享', shareCopied: '已複製——隨處貼上',
+    saveCard: '儲存卡片', cardSaved: '卡片已儲存',
+    cardCta: '你能撐得更久嗎？',
     shareText: '我在《DEAD LINE——墓園夜班》撐到了第{n}波，{score}分、{kills}殺。你撐得比我久嗎？',
     shareTextBest: '《DEAD LINE——墓園夜班》新紀錄！第{n}波、{score}分、{kills}殺。你撐得比我久嗎？',
     shareGame: '《DEAD LINE——墓園夜班》——每一波都有更凶的新變種。你撐得比我久嗎？',
@@ -955,6 +972,8 @@ const I18N = {
     finalScore: 'Puntuación final', statsOne: '1 baja · oleada {w}', statsMany: '{k} bajas · oleada {w}',
     overBest: 'Récord {v}', newBest: '¡Nuevo récord!', restart: 'Otra ronda',
     shareBtn: 'Compartir', shareCopied: 'Copiado — pégalo donde quieras',
+    saveCard: 'Guardar tarjeta', cardSaved: 'Tarjeta guardada',
+    cardCta: '¿Puedes superarme?',
     shareText: 'Llegué a la oleada {n} con {score} pts y {kills} bajas en DEAD LINE. ¿Aguantas más que yo?',
     shareTextBest: '¡Nuevo récord en DEAD LINE! Oleada {n}, {score} pts, {kills} bajas. ¿Aguantas más que yo?',
     shareGame: 'DEAD LINE — turno de noche. Cada oleada trae una raza peor. ¿Aguantas más que yo?',
@@ -1001,6 +1020,8 @@ const I18N = {
     finalScore: 'Score final', statsOne: '1 élimination · vague {w}', statsMany: '{k} éliminations · vague {w}',
     overBest: 'Record {v}', newBest: 'Nouveau record !', restart: 'On remet ça',
     shareBtn: 'Partager', shareCopied: 'Copié — colle-le où tu veux',
+    saveCard: 'Enregistrer la carte', cardSaved: 'Carte enregistrée',
+    cardCta: 'Tu feras mieux ?',
     shareText: 'J’ai tenu jusqu’à la vague {n} avec {score} pts et {kills} éliminations dans DEAD LINE. Tu tiendras plus longtemps ?',
     shareTextBest: 'Nouveau record dans DEAD LINE ! Vague {n}, {score} pts, {kills} éliminations. Tu tiendras plus longtemps ?',
     shareGame: 'DEAD LINE — garde de nuit. Chaque vague amène une pire espèce. Tu tiendras plus longtemps ?',
@@ -1047,6 +1068,8 @@ const I18N = {
     finalScore: 'Endpunkte', statsOne: '1 Kill · Welle {w}', statsMany: '{k} Kills · Welle {w}',
     overBest: 'Rekord {v}', newBest: 'Neuer Rekord!', restart: 'Nochmal!',
     shareBtn: 'Teilen', shareCopied: 'Kopiert — füge es überall ein',
+    saveCard: 'Karte speichern', cardSaved: 'Karte gespeichert',
+    cardCta: 'Hältst du länger durch?',
     shareText: 'Ich habe es in DEAD LINE bis Welle {n} geschafft — {score} Punkte, {kills} Kills. Hältst du länger durch?',
     shareTextBest: 'Neuer Rekord in DEAD LINE! Welle {n}, {score} Punkte, {kills} Kills. Hältst du länger durch?',
     shareGame: 'DEAD LINE — Nachtschicht. Jede Welle bringt eine schlimmere Rasse. Hältst du länger durch?',
@@ -1093,6 +1116,8 @@ const I18N = {
     finalScore: '최종 점수', statsOne: '처치 1 · 제{w}파', statsMany: '처치 {k} · 제{w}파',
     overBest: '최고 {v}', newBest: '신기록!', restart: '다시 도전',
     shareBtn: '공유', shareCopied: '복사했어 — 아무 데나 붙여',
+    saveCard: '카드 저장', cardSaved: '카드를 저장했어',
+    cardCta: '넘어설 수 있겠어?',
     shareText: 'DEAD LINE에서 제{n}파까지 생존 — {score}점, {kills}킬. 네가 더 오래 버틸 수 있겠어?',
     shareTextBest: 'DEAD LINE 신기록! 제{n}파, {score}점, {kills}킬. 네가 더 오래 버틸 수 있겠어?',
     shareGame: 'DEAD LINE — 묘지 야근. 매 웨이브마다 더 흉포한 놈이 나타난다. 네가 더 오래 버틸 수 있겠어?',
@@ -1240,7 +1265,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.14.6'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.14.7'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 /* ═══════════════ the breed ladder — 100 rungs, one per wave ═══════════════
@@ -2052,6 +2077,7 @@ function finish() {
   overBest.textContent   = t('overBest', { v: fmt(best) });
   pillBest.hidden        = !newBest;
   lastRunNewBest        = newBest;
+  btnSaveCard.hidden    = canShareFiles(); // no image share on this browser → the card is downloadable instead
   updateHud();
   overTimer = setTimeout(() => show(ovOver), 620); // let the death land first
 }
@@ -2534,15 +2560,430 @@ async function doShare(data) {
   } catch {} // no clipboard / denied — stay quiet
 }
 
-function shareRun() {
-  const p = { n: wave, score: fmt(score), kills };
-  doShare({ title: 'DEAD LINE — ' + t('tagline'), url: SHARE_URL(),
-            text: lastRunNewBest ? t('shareTextBest', p) : t('shareText', p) });
+/* ── share card — the image share ──────────────────────────────────
+   A 1080×1080 PNG built on demand, only when the player taps Share
+   or Save card on the game-over card — never on every death. Square,
+   not 1200×630: the audience is mobile-first, and the card lands in
+   chat apps and square-friendly feeds where 1:1 fills the phone
+   edge-to-edge and no platform letterboxes or crops it. */
+const CARD_PX   = 1080;
+const CARD_URL  = 'https://robenten.github.io/dead-line/?v=2026.11.14.7';
+const CARD_SANS = '"Avenir Next","Century Gothic","Segoe UI","Helvetica Neue",sans-serif';
+const CARD_MONO = '"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace';
+
+/* tiny QR encoder — byte mode, EC level L, versions 1-5 (single RS
+   block), all 8 masks with penalty pick. Exactly enough for the
+   52-byte canonical URL → version 3 (29×29). No external libraries. */
+const qrEncode = (() => {
+  const EXP = new Uint8Array(512), LOG = new Uint8Array(256);
+  for (let i = 0, x = 1; i < 255; i++) { EXP[i] = x; LOG[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11d; }
+  for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
+  const gmul = (a, b) => (a && b) ? EXP[LOG[a] + LOG[b]] : 0;
+  const CAP = [19, 34, 55, 80, 108];  // data codewords, level L, v1-5
+  const ECC = [7, 10, 15, 20, 26];    // ec codewords per version
+  const AC  = [0, 18, 22, 26, 30];     // alignment center, v2-5 (v1 has none)
+
+  function rs(data, ecLen) { // Reed-Solomon remainder via synthetic division
+    let gen = [1];           // generator ∏(x+α^i), highest-degree first, monic
+    for (let i = 0; i < ecLen; i++) {
+      const prev = gen, a = EXP[i];
+      gen = [prev[0]];       // (x + a)·prev, degree-aligned
+      for (let j = 1; j < prev.length; j++) gen.push(prev[j] ^ gmul(prev[j - 1], a));
+      gen.push(gmul(prev[prev.length - 1], a));
+    }
+    const rem = data.concat(new Array(ecLen).fill(0));
+    for (let i = 0; i < data.length; i++) {
+      const k = rem[i];
+      if (!k) continue;
+      for (let j = 0; j <= ecLen; j++) rem[i + j] ^= gmul(gen[j], k);
+    }
+    return rem.slice(data.length);
+  }
+  function bch15(d) { // 5-bit format data (ecL<<3|mask) → 15-bit code
+    let r = d << 10;
+    for (let i = 14; i >= 10; i--) if ((r >> i) & 1) r ^= 0x537 << (i - 10);
+    return ((d << 10) | (r & 0x3ff)) ^ 0x5412;
+  }
+
+  return text => {
+    let v = 0;
+    while (v < 5 && CAP[v] * 8 < 16 + text.length * 8) v++;
+    if (v >= 5) return null;                       // URL grew past v5 — skip the code
+    const cap = CAP[v], ecLen = ECC[v], size = 21 + 4 * v;
+
+    const bits = [];
+    const put = (val, n) => { for (let i = n - 1; i >= 0; i--) bits.push((val >> i) & 1); };
+    put(4, 4); put(text.length, 8);                // byte mode + count
+    for (let i = 0; i < text.length; i++) put(text.charCodeAt(i), 8);
+    put(0, Math.min(4, cap * 8 - bits.length));    // terminator
+    while (bits.length % 8) bits.push(0);
+    const bytes = [];
+    for (let i = 0; i < bits.length; i += 8) {
+      let b = 0;
+      for (let j = 0; j < 8; j++) b = (b << 1) | bits[i + j];
+      bytes.push(b);
+    }
+    for (let pad = 0; bytes.length < cap;) bytes.push((pad++ & 1) ? 0x11 : 0xec);
+    const cw = bytes.concat(rs(bytes, ecLen));
+
+    // matrix: function patterns first
+    const grid = [], fn = [];
+    for (let y = 0; y < size; y++) { grid.push(new Array(size).fill(false)); fn.push(new Array(size).fill(false)); }
+    const mark = (x, y, d) => { grid[y][x] = d; fn[y][x] = true; };
+    for (const [fx, fy] of [[0, 0], [size - 7, 0], [0, size - 7]]) // finders + separators
+      for (let dy = -1; dy <= 7; dy++) for (let dx = -1; dx <= 7; dx++) {
+        const x = fx + dx, y = fy + dy;
+        if (x < 0 || y < 0 || x >= size || y >= size) continue;
+        const core = dx >= 0 && dx <= 6 && dy >= 0 && dy <= 6;
+        mark(x, y, core && (dx === 0 || dx === 6 || dy === 0 || dy === 6 || (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4)));
+      }
+    for (let i = 8; i < size - 8; i++) { mark(i, 6, !(i & 1)); mark(6, i, !(i & 1)); } // timing
+    if (v > 0) { const a = AC[v];                                                          // alignment
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++)
+        mark(a + dx, a + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+    }
+    for (let i = 0; i <= 8; i++) { if (!fn[8][i]) mark(i, 8, false); if (!fn[i][8]) mark(8, i, false); } // reserve format
+    for (let i = 0; i < 8; i++) { if (!fn[8][size - 1 - i]) mark(size - 1 - i, 8, false); if (!fn[size - 1 - i][8]) mark(8, size - 1 - i, false); }
+    mark(8, size - 8, true);                                                               // dark module
+
+    // data bits — the standard zigzag from the bottom-right
+    const dgrid = [];
+    for (let y = 0; y < size; y++) dgrid.push(new Array(size).fill(false));
+    let bi = 0;
+    const total = cw.length * 8;
+    for (let right = size - 1; right >= 1; right -= 2) {
+      if (right === 6) right = 5;
+      for (let vert = 0; vert < size; vert++) {
+        for (let j = 0; j < 2; j++) {
+          const x = right - j;
+          const y = (((right + 1) & 2) === 0) ? size - 1 - vert : vert;
+          if (!fn[y][x] && bi < total) {
+            dgrid[y][x] = ((cw[bi >> 3] >> (7 - (bi & 7))) & 1) === 1;
+            bi++;
+          }
+        }
+      }
+    }
+
+    // 8 candidate masks → lowest penalty wins
+    const masks = [
+      (x, y) => !((x + y) & 1),
+      (x, y) => !(y & 1),
+      (x, y) => !(x % 3),
+      (x, y) => !((x + y) % 3),
+      (x, y) => !(((x / 3 | 0) + (y / 2 | 0)) & 1),
+      (x, y) => !(((x * y) % 2) + ((x * y) % 3)),
+      (x, y) => !(((x * y) % 2 + (x * y) % 3) & 1),
+      (x, y) => !(((x + y) % 2 + (x * y) % 3) & 1),
+    ];
+    function penalty(g) {
+      let s = 0, dark = 0;
+      const line = get => {
+        let run = 1, str = '';
+        for (let k = 0; k < size; k++) {
+          const d = get(k); str += d ? '1' : '0';
+          if (k > 0 && get(k - 1) === d) run++;
+          else { if (run >= 5) s += 3 + run - 5; run = 1; }
+        }
+        if (run >= 5) s += 3 + run - 5;
+        for (const p of ['10111010000', '00001011101'])
+          for (let k = 0; k + p.length <= size; k++)
+            if (str.substr(k, p.length) === p) s += 40;
+      };
+      for (let i = 0; i < size; i++) { line(k => g[i][k]); line(k => g[k][i]); }
+      for (let y = 0; y + 1 < size; y++) for (let x = 0; x + 1 < size; x++) {
+        const a = g[y][x];
+        if (a === g[y][x + 1] && a === g[y + 1][x] && a === g[y + 1][x + 1]) s += 3;
+      }
+      for (const row of g) for (const m of row) if (m) dark++;
+      s += 10 * Math.floor(Math.abs(dark * 100 / (size * size) - 50) / 5);
+      return s;
+    }
+    let best = null, bestScore = Infinity, bestMask = 0;
+    for (let mi = 0; mi < 8; mi++) {
+      const g = grid.map((row, y) => row.map((d, x) => fn[y][x] ? d : (dgrid[y][x] !== masks[mi](x, y))));
+      const sc = penalty(g);
+      if (sc < bestScore) { bestScore = sc; best = g; bestMask = mi; }
+    }
+
+    // format info (EC L = 01) — written last, never masked
+    const fi = bch15(0x8 | bestMask), bit = i => (fi >> i) & 1;
+    for (let i = 0; i <= 5; i++) best[i][8] = bit(i);
+    best[7][8] = bit(6); best[8][8] = bit(7); best[8][7] = bit(8);
+    for (let i = 9; i < 15; i++) best[8][14 - i] = bit(i);
+    for (let i = 0; i < 8; i++) best[8][size - 1 - i] = bit(i);
+    for (let i = 8; i < 15; i++) best[size - 15 + i][8] = bit(i);
+    best[size - 8][8] = true;
+    return best;
+  };
+})();
+
+/* the card's cast — fixed looks & phases, so the art is deterministic */
+const CARD_CREW = [
+  { skin:'#c68d5e', hair:'#33424a', cloth:'#5a7d8c', arms:2, phase:1.3, cls:'survivor' }, // leader
+  { skin:'#e8c39e', hair:'#2f3a30', cloth:'#6a8c7d', arms:2, phase:2.9, cls:'fighter'  },
+  { skin:'#8d5a3b', hair:'#41382b', cloth:'#8c6a4a', arms:2, phase:4.4, cls:'hunter'   },
+  { skin:'#f0d0b0', hair:'#2f2f3a', cloth:'#8c7d5a', arms:2, phase:5.8, cls:'medic'    },
+  { skin:'#a06a48', hair:'#2f3a30', cloth:'#8c5a6a', arms:2, phase:0.7, cls:'survivor' },
+];
+const CARD_HORDE = [
+  { bIdx:0, skin:'#8fae7a', hair:'#2f3a30', cloth:'#4a5a48', arms:2, phase:1.0 },
+  { bIdx:3, skin:'#7da087', hair:'#33424a', cloth:'#3f4a52', arms:1, phase:3.7 },
+];
+let QR_MATRIX = null; // the URL never changes — encode once, blit forever
+let lastCard = null;  // debug record of what the last generated card shows
+
+function drawCardQr(c, x, y, size) {
+  const m = (QR_MATRIX ??= qrEncode(CARD_URL));
+  if (!m) return;
+  const quiet = 4, cell = Math.max(2, Math.floor(size / (m.length + quiet * 2))); // integer — crisp edges
+  const off = ((size - (m.length + quiet * 2) * cell) / 2) | 0;                  // center on the plate
+  c.fillStyle = '#e9f0ea';  // a pale tag, like a toe-tag on the night shift
+  c.beginPath(); c.roundRect(x - 8, y - 8, size + 16, size + 16, 20); c.fill();
+  c.fillStyle = '#0c1310';
+  for (let iy = 0; iy < m.length; iy++)
+    for (let ix = 0; ix < m.length; ix++)
+      if (m[iy][ix]) c.fillRect(x + off + (quiet + ix) * cell, y + off + (quiet + iy) * cell, cell, cell);
 }
+
+function drawShareCard(c) {
+  const realCtx = ctx, realBoost = CHAR_BOOST;
+  ctx = c; CHAR_BOOST = 1; // borrow the character renderer, at native size
+  try { drawShareCardRaw(c); }
+  finally { ctx = realCtx; CHAR_BOOST = realBoost; }
+}
+
+function drawShareCardRaw(c) {
+  const W = CARD_PX, M = 84;
+  const track = v => { c.letterSpacing = v; }; // ignored where unsupported — tracking is a nicety
+
+  /* atmosphere — the board's own night */
+  const bg = c.createLinearGradient(0, 0, 0, W);
+  bg.addColorStop(0, '#0c1310'); bg.addColorStop(.55, '#101a15'); bg.addColorStop(1, '#0a100d');
+  c.fillStyle = bg; c.fillRect(0, 0, W, W);
+  c.fillStyle = 'rgba(255,255,255,.02)';  // the checkerboard
+  for (let y = 0; y < 18; y++) for (let x = 0; x < 18; x++)
+    if ((x + y) & 1) c.fillRect(x * 60, y * 60, 60, 60);
+  const moonX = 900, moonY = 152;          // the pale moon
+  const mg = c.createRadialGradient(moonX, moonY, 0, moonX, moonY, 240);
+  mg.addColorStop(0, 'rgba(215,228,244,.16)'); mg.addColorStop(1, 'rgba(215,228,244,0)');
+  c.fillStyle = mg; c.fillRect(moonX - 240, moonY - 240, 480, 480);
+  c.fillStyle = 'rgba(223,232,244,.9)';
+  c.beginPath(); c.arc(moonX, moonY, 44, 0, 7); c.fill();
+  for (const [fx, fy, r, a] of [[300, 1020, 420, .05], [880, 980, 380, .04]]) { // grave fog
+    const g = c.createRadialGradient(fx, fy, 0, fx, fy, r);
+    g.addColorStop(0, `rgba(148,178,188,${a})`); g.addColorStop(1, 'rgba(148,178,188,0)');
+    c.fillStyle = g; c.fillRect(fx - r, fy - r, r * 2, r * 2);
+  }
+
+  /* masthead */
+  c.textBaseline = 'alphabetic';
+  c.fillStyle = '#7f938c';
+  c.font = `600 24px ${CARD_MONO}`; track('12px');
+  c.fillText(t('tagline').toUpperCase(), M, 118);
+  const ty = 212;
+  c.font = `800 92px ${CARD_SANS}`; track('10px');
+  let x = M;
+  c.fillStyle = '#e9f0ea';
+  c.fillText('DEAD', x, ty); x += c.measureText('DEAD').width + 14;
+  c.font = `italic 600 48px ${CARD_SANS}`; track('0px');
+  c.fillStyle = '#e5484d';
+  c.fillText('/', x, ty - 8); x += c.measureText('/').width + 22;
+  c.font = `800 92px ${CARD_SANS}`; track('10px');
+  c.fillStyle = '#8fae7a';
+  c.fillText('LINE', x, ty);
+  track('0px');
+
+  /* hero score */
+  c.fillStyle = '#7f938c';
+  c.font = `600 26px ${CARD_MONO}`; track('12px');
+  c.fillText(t('hudScore').toUpperCase(), M, 322);
+  track('0px');
+  c.shadowColor = 'rgba(255,209,102,.35)'; c.shadowBlur = 36;
+  c.fillStyle = '#ffd166';
+  const scoreStr = fmt(score);
+  const scorePx = Math.min(216, 560 / Math.max(1, scoreStr.length - 1)); // a freak 5-digit run still fits
+  c.font = `700 ${scorePx}px ${CARD_MONO}`; track('4px');
+  c.fillText(scoreStr, M, 548);
+  c.shadowBlur = 0; track('0px');
+
+  if (lastRunNewBest) { // the gold flair — only when the run set a record
+    c.font = `700 30px ${CARD_MONO}`; track('8px');
+    const fl = t('newBest').toUpperCase();
+    const pw = c.measureText(fl).width + 108, ph = 62, px = M, py = 586;
+    c.beginPath(); c.roundRect(px, py, pw, ph, ph / 2);
+    c.fillStyle = 'rgba(255,209,102,.09)'; c.fill();
+    c.strokeStyle = '#ffd166'; c.lineWidth = 3; c.stroke();
+    c.fillStyle = '#ffd166';
+    const sx = px + 36, sy = py + ph / 2, R = 13;
+    c.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const r = i & 1 ? R * .45 : R, a = -Math.PI / 2 + i * Math.PI / 5;
+      c[i ? 'lineTo' : 'moveTo'](sx + Math.cos(a) * r, sy + Math.sin(a) * r);
+    }
+    c.closePath(); c.fill();
+    c.fillText(fl, px + 58, py + 41);
+    track('0px');
+  }
+
+  /* wave & kills */
+  const sy = lastRunNewBest ? 730 : 656;
+  c.fillStyle = '#7f938c';
+  c.font = `600 24px ${CARD_MONO}`; track('10px');
+  c.fillText(t('hudWave').toUpperCase(), M, sy);
+  c.fillText(t('hudKills').toUpperCase(), M + 300, sy);
+  track('0px');
+  c.font = `700 68px ${CARD_MONO}`;
+  c.fillStyle = '#8fae7a';
+  c.fillText(String(wave), M, sy + 78);
+  c.fillStyle = '#e9f0ea';
+  c.fillText(fmt(kills, 2), M + 300, sy + 78);
+
+  /* the challenge */
+  c.fillStyle = '#93a89f';
+  c.font = `italic 600 34px ${CARD_SANS}`;
+  c.fillText(t('cardCta'), M, 898);
+
+  /* the scene — the game's own characters, drawn by the game's own
+     renderer: the chain fleeing up-right, the horde closing in */
+  const T = 2400; // fixed clock → a well-paced, deterministic stride
+  const pos = [ { x: 762, y: 798 }, { x: 792, y: 700 }, { x: 826, y: 612 }, { x: 872, y: 546 }, { x: 930, y: 468 } ]; // tail → leader
+  for (const [gx, gy, gw, gh] of [[690, 545, 88, 128], [958, 692, 78, 112]]) { // gravestones
+    c.fillStyle = '#1c2822';
+    c.beginPath(); c.roundRect(gx, gy, gw, gh, [gw / 2, gw / 2, 6, 6]); c.fill();
+    c.strokeStyle = 'rgba(163,241,96,.07)'; c.lineWidth = 2; c.stroke();
+    c.strokeStyle = '#2a3830'; c.lineWidth = 5; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(gx + gw / 2, gy + gh * .3); c.lineTo(gx + gw / 2, gy + gh * .52);
+    c.moveTo(gx + gw * .3, gy + gh * .38); c.lineTo(gx + gw * .7, gy + gh * .38); c.stroke();
+  }
+  for (const [gx, gy] of [[612, 852], [688, 712]]) { // gore under the horde
+    c.fillStyle = 'rgba(110,28,40,.30)';
+    for (let i = 0; i < 5; i++) {
+      c.beginPath();
+      c.arc(gx + (i - 2) * 14, gy + (i & 1 ? 8 : -6), 9 + i * 2, 0, 7); c.fill();
+    }
+  }
+  c.strokeStyle = 'rgba(163,241,96,.20)'; // the chain's rope
+  c.lineWidth = 22; c.lineCap = 'round'; c.lineJoin = 'round';
+  c.beginPath(); c.moveTo(pos[0].x, pos[0].y);
+  for (let i = 1; i < pos.length; i++) c.lineTo(pos[i].x, pos[i].y);
+  c.stroke();
+  { // the machete pickup — the gold "fight back" moment
+    const cx = 756, cy = 424, s = 40;
+    const halo = c.createRadialGradient(cx, cy, s, cx, cy, s + 42);
+    halo.addColorStop(0, 'rgba(255,209,102,.28)'); halo.addColorStop(.5, 'rgba(255,209,102,.10)'); halo.addColorStop(1, 'rgba(255,209,102,0)');
+    c.fillStyle = halo;
+    c.beginPath(); c.arc(cx, cy, s + 42, 0, 7); c.fill();
+    c.save(); c.translate(cx, cy); c.rotate(-.62);
+    c.fillStyle = '#d3ddd6';
+    c.beginPath();
+    c.moveTo(-s * .1, -s * .95); c.lineTo(s * .62, -s * .55); c.lineTo(s * .66, -s * .25); c.lineTo(-s * .1, -s * .35);
+    c.closePath(); c.fill();
+    c.strokeStyle = '#f4f9f4'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(-s * .08, -s * .9); c.lineTo(s * .6, -s * .53); c.stroke();
+    c.fillStyle = '#8a5f45';
+    c.beginPath(); c.roundRect(-s * .16, -s * .32, s * .32, s * 1.1, 4); c.fill();
+    c.fillStyle = '#2a3830';
+    c.fillRect(-s * .26, -s * .42, s * .52, s * .14);
+    c.restore();
+  }
+  const cast = []; // painter order — ascending y, like the game's board
+  pos.forEach((p, i) => {
+    const q = pos[Math.min(i + 1, pos.length - 1)];
+    const dx = i === pos.length - 1 ? 0.6 : q.x - p.x, dy = i === pos.length - 1 ? -0.8 : q.y - p.y;
+    const m = Math.hypot(dx, dy) || 1;
+    cast.push({ y: p.y, draw: () => {
+      c.save(); c.translate(p.x, p.y); c.scale(4.5, 4.5);
+      drawHumanChar(0, 0, T, CARD_CREW[i], { fx: dx / m, fy: dy / m, eyes: i === pos.length - 1 ? 'leader' : 'normal', scale: 1 });
+      c.restore();
+    }});
+  });
+  CARD_HORDE.forEach((z, i) => {
+    const p = [{ x: 668, y: 662 }, { x: 610, y: 800 }][i];
+    cast.push({ y: p.y, draw: () => {
+      c.save(); c.translate(p.x, p.y); c.scale(i ? 5.4 : 4.6, i ? 5.4 : 4.6);
+      drawZombieChar(0, 0, T, z, { fx: .6, fy: .8, chasing: true });
+      c.restore();
+    }});
+  });
+  cast.sort((a, b) => a.y - b.y).forEach(ct => ct.draw());
+  c.strokeStyle = 'rgba(163,241,96,.35)'; // the leader's marker ring
+  c.lineWidth = 6;
+  c.beginPath(); c.arc(pos[pos.length - 1].x, pos[pos.length - 1].y, 63, 0, 7); c.stroke();
+
+  /* vignette */
+  const vg = c.createRadialGradient(W / 2, W / 2, W * .34, W / 2, W / 2, W * .74);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.34)');
+  c.fillStyle = vg; c.fillRect(0, 0, W, W);
+
+  /* footer — the way in */
+  c.strokeStyle = 'rgba(163,241,96,.16)'; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(M, 926); c.lineTo(796, 926); c.stroke();
+  c.fillStyle = '#c6d6c9';
+  c.font = `600 28px ${CARD_MONO}`; track('2px');
+  c.fillText('robenten.github.io/dead-line', M, 988);
+  track('0px');
+  drawCardQr(c, 836, 828, 160);
+}
+
+function renderShareCard() {
+  return new Promise((resolve, reject) => {
+    let cv;
+    try {
+      cv = document.createElement('canvas');
+      cv.width = cv.height = CARD_PX;
+      const c = cv.getContext('2d');
+      drawShareCard(c);
+      lastCard = { score: fmt(score), wave, kills: fmt(kills, 2), newBest: lastRunNewBest,
+                   scoreLabel: t('hudScore'), waveLabel: t('hudWave'), killsLabel: t('hudKills'), cta: t('cardCta') };
+    } catch (e) { reject(e); return; }
+    cv.toBlob(b => b ? resolve(b) : reject(new Error('card encode failed')), 'image/png');
+  });
+}
+
+const canShareFiles = () => {
+  try {
+    return !!(navigator.canShare && navigator.canShare({ files: [new File([], 'x.png', { type: 'image/png' })] }));
+  } catch { return false; }
+};
+
+async function shareRun() {
+  const p = { n: wave, score: fmt(score), kills };
+  const text = lastRunNewBest ? t('shareTextBest', p) : t('shareText', p);
+  const title = 'DEAD LINE — ' + t('tagline');
+  if (canShareFiles()) {
+    try {
+      const blob = await renderShareCard(); // built inside the gesture — iOS Safari's share sheet needs that
+      const file = new File([blob], 'dead-line.png', { type: 'image/png' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text, title, url: SHARE_URL() });
+        return;
+      }
+    } catch (e) {
+      if (e && e.name === 'AbortError') return; // dismissed — not an error
+      // card or file share broke → fall through to the text-only share
+    }
+  }
+  doShare({ title, url: SHARE_URL(), text });
+}
+
+async function saveCard() {
+  try {
+    const blob = await renderShareCard();
+    const u = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = u; a.download = 'dead-line-' + fmt(score) + '.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 5000);
+    showToast(t('cardSaved'), { quick: true });
+  } catch {}
+}
+
 function shareGame() {
   doShare({ title: 'DEAD LINE — ' + t('tagline'), url: SHARE_URL(), text: t('shareGame') });
 }
 $('btn-share').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); SND.ui(); shareRun(); });
+btnSaveCard.addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); SND.ui(); saveCard(); });
 $('btn-share-game').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); SND.ui(); shareGame(); });
 langPick.addEventListener('click', e => e.stopPropagation()); // picking a language isn't "begin"
 btnPause.addEventListener('click', e => {
@@ -3188,6 +3629,17 @@ SND.onReady(() => {    // one-time "audio armed" confirmation (suspended→runni
 document.querySelectorAll('.build-tag').forEach(el => el.textContent = BUILD);
 requestAnimationFrame(frame);
 
+// pre-warm the share card while nobody's looking (fonts, gradients, QR
+// matrix) — the tap on Share should never pay the first-render cost
+(window.requestIdleCallback || (f => setTimeout(f, 1800)))(() => {
+  try {
+    QR_MATRIX ??= qrEncode(CARD_URL);
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = CARD_PX;
+    drawShareCard(cv.getContext('2d')); // draw only — no blob, no jank
+  } catch {}
+});
+
 // unlock audio on every VALID activation gesture — per the HTML spec a touch
 // only counts on pointerup/touchend/click (pointerdown is mouse-only, and
 // touchstart never counts — which is exactly why iOS stayed silent). Capture
@@ -3205,6 +3657,21 @@ window.addEventListener('keydown', unlockAudio, { capture: true });
 window.addEventListener('pointerup', unlockAudio, { capture: true, passive: true });
 window.addEventListener('touchend', unlockAudio, { capture: true, passive: true });
 window.addEventListener('click', unlockAudio, { capture: true, passive: true });
+
+// headless-verification hook — inert in normal play; only ?__test__ lights it up
+if (/[?&]__test__/.test(location.search)) {
+  window.__DL_TEST__ = {
+    renderShareCard,
+    canShareFiles,
+    setLang(l) { LANG = l; applyLang(); },
+    setBest(v) { best = v; },
+    forceOver(s, w, k) { score = s; wave = w; kills = k; finish(); },
+    get lastCard() { return lastCard; },
+    get pillBestHidden() { return pillBest.hidden; },
+    get state() { return state; },
+    t, I18N,
+  };
+}
 
 })();
 </script>

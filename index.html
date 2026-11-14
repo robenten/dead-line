@@ -1265,7 +1265,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.14.7'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.14.8'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 /* ═══════════════ the breed ladder — 100 rungs, one per wave ═══════════════
@@ -1422,7 +1422,7 @@ const saveBest = v => { try { localStorage.setItem('svz-best-' + role, String(v)
 /* ═══════════════ audio (Web Audio, all synthesized) ═══════════════ */
 
 const SND = (() => {
-  let ctx = null, master = null, comp = null, noiseBuf = null, drone = null, muted = false;
+  let ctx = null, master = null, comp = null, noiseBuf = null, muted = false;
 
   // AudioContext is only ever created inside a user gesture (see the
   // capture-phase listeners at the bottom). unlock() runs on EVERY gesture:
@@ -1678,66 +1678,117 @@ const SND = (() => {
     hiss(.55 + .05, .18, .012, 3000, 6000, null, 'bandpass');
   } catch {} }
 
-  /* ── ambient graveyard drone (only while playing) — it breathes now ── */
+  /* ── chiptune graveyard loop (only while playing) ──────────────────
+     A harmonic minor · 80 BPM · two 4-bar sections (A/B) that alternate
+     so the loop never fatigues — eerie treble lead on a 25%-duty pulse
+     wave with a slow lo-fi vibrato, a triangle bass pulse, and sparse
+     noise ticks for a heartbeat/footstep feel. Pure oscillators and the
+     shared noise buffer — zero assets. A lookahead scheduler (200ms
+     window on an 80ms interval) places every note on the AudioContext
+     clock; the game loop never touches it. Voice levels sit at ~65% of
+     the old drone — it's background music, not the show. */
 
-  function droneStart(){
-    if (!ctx || muted || drone) return;
-    try {
-      const t = ctx.currentTime;
-      const out = ctx.createGain(); out.gain.value = 0;
-      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 620; lp.Q.value = .4;
-      const mix = ctx.createGain(); mix.gain.value = .8;
-      const o1 = osc('triangle', 110, t);
-      const o2 = osc('triangle', 164.81, t); o2.detune.value = 7;   // a grumbly fifth
-      const o3 = osc('sine', 220, t);     o3.detune.value = -9;
-      [o1, o2, o3].forEach(o => o.connect(mix));
-      mix.connect(lp).connect(out).connect(master);
-      const lfo = osc('sine', .07, t);                             // slow breathing
-      const lfoG = ctx.createGain(); lfoG.gain.value = .3;
-      lfo.connect(lfoG).connect(mix.gain);
-      const lfo2 = osc('sine', .045, t);                           // slow filter drift
-      const lfo2G = ctx.createGain(); lfo2G.gain.value = 190;
-      lfo2.connect(lfo2G).connect(lp.frequency);
-      o1.start(t); o2.start(t); o3.start(t); lfo.start(t); lfo2.start(t);
-      out.gain.setTargetAtTime(.05, t, 1.2);
-      const nodes = [o1, o2, o3, lfo, lfo2];
-      // distant moans — a few quiet calls drifting across the yard
-      const moans = [];
-      for (let m = 0; m < 4; m++) {
-        const mt = 6 + m * (9 + Math.random() * 6), mf = 128 + Math.random() * 46;
-        const mo = osc('sine', mf, t + mt); mo.frequency.exponentialRampToValueAtTime(mf * .78, t + mt + 1.6);
-        const mo2 = osc('sine', mf * 1.007, t + mt); mo2.frequency.exponentialRampToValueAtTime(mf * .78, t + mt + 1.5);
-        const mg = ctx.createGain();
-        mg.gain.setValueAtTime(0, t + mt);
-        mg.gain.linearRampToValueAtTime(.017, t + mt + .5);
-        mg.gain.exponentialRampToValueAtTime(.0006, t + mt + 1.7);
-        let mh = mg;
-        try {
-          if (ctx.createStereoPanner) {
-            const mp = ctx.createStereoPanner();
-            mp.pan.value = Math.random() * 1.2 - .6;
-            mg.connect(mp); mh = mp;
-          }
-        } catch {}
-        mo.connect(mg); mo2.connect(mg); mh.connect(master);
-        mo.start(t + mt); mo2.start(t + mt);
-        mo.stop(t + mt + 1.8); mo2.stop(t + mt + 1.8);
-        moans.push(mo, mo2);
-      }
-      drone = { stop(){
-        try {
-          const e = ctx.currentTime;
-          out.gain.setTargetAtTime(0, e, .25);
-          nodes.forEach(o => o.stop(e + 1));
-        } catch {}
-      } };
-    } catch { drone = null; }
+  const MUS_8TH = .375;  // 80 BPM eighth grid; bar = 3s, section = 12s
+  const MUS_LEAD_A = ['A4',0,'C5',0,'B4',0,'G#4',0,'A4',0,0,0,'E4',0,0,0,'F4',0,'E4',0,'D4',0,'C5',0,'B4',0,'G#4',0,'A4',0,0,0];
+  const MUS_LEAD_B = ['C5',0,'B4',0,'A4',0,'F4',0,'E4',0,'F4',0,'G#4',0,0,0,'A4',0,'C5',0,'E5',0,'D5',0,'C5',0,'B4',0,'G#4',0,0,0];
+  const MUS_BASS_A = ['A2','A2','F2','E2'];  // i … i –VI –V, the graveyard cadence
+  const MUS_BASS_B = ['F2','E2','A2','E2'];  // –VI –V i –V — the turn that lifts then falls home
+  const NOTE = s => { const m = /^([A-G])(#?)(\d)$/.exec(s);
+    return 440 * Math.pow(2, (({C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]] + (m[2] ? 1 : 0)) - 9 + (+m[3] - 4) * 12) / 12); };
+  const musDbg = { bars: 0, notes: 0, starts: 0, events: [] }; // rolling record — drives headless verification
+  let mus = null;
+
+  function pulse25(){ // 25%-duty pulse — the NES-thin lead voice
+    const H = 24, re = new Float32Array(H), im = new Float32Array(H);
+    for (let i = 1; i < H; i++) re[i] = 2 / (i * Math.PI) * Math.sin(i * Math.PI * .25);
+    return ctx.createPeriodicWave(re, im);
   }
 
-  function droneStop(){ if (!drone) return; try { drone.stop(); } catch {} drone = null; }
+  function musicStart(){
+    if (!ctx || muted || mus) return;
+    musDbg.starts++;
+    try {
+      const t0 = ctx.currentTime;
+      const out = ctx.createGain(); out.gain.value = 0; // fade bus — also the stop handle
+      out.connect(master);
+      const vib = osc('sine', 5.2, t0);                 // lo-fi vibrato — one shared LFO for the lead
+      const vibG = ctx.createGain(); vibG.gain.value = 7; // ±7 cents
+      vib.connect(vibG); vib.start(t0);
+      const lead = pulse25();
+      const dbg = (ch, f, t) => { musDbg.notes++; if (musDbg.events.length > 256) musDbg.events.splice(0, 64); musDbg.events.push({ ch, f: Math.round(f * 100) / 100, t: +t.toFixed(3) }); };
+
+      const leadNote = (f, t) => {
+        const o = ctx.createOscillator(); o.setPeriodicWave(lead);
+        o.frequency.value = f;
+        try { vibG.connect(o.detune); } catch {}
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(.04, t + .012);
+        g.gain.setValueAtTime(.04, t + MUS_8TH * 1.1);
+        g.gain.exponentialRampToValueAtTime(.0007, t + MUS_8TH * 1.9);
+        o.connect(g).connect(out);
+        o.start(t); o.stop(t + MUS_8TH * 2);
+        dbg('lead', f, t);
+      };
+      const bassNote = (f, t) => {
+        const o = osc('triangle', f, t);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(.045, t + .006);
+        g.gain.exponentialRampToValueAtTime(.0007, t + .58);
+        o.connect(g).connect(out);
+        o.start(t); o.stop(t + .62);
+        dbg('bass', f, t);
+      };
+      const tick = (t, vol, hi) => { // the noise channel — heartbeat thumps & footsteps
+        const n = noiseSrc();
+        const f = ctx.createBiquadFilter(); f.type = hi ? 'highpass' : 'lowpass';
+        f.frequency.value = hi ? 5200 : 320;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(vol, t);
+        g.gain.exponentialRampToValueAtTime(.0006, t + (hi ? .03 : .09));
+        n.connect(f).connect(g).connect(out);
+        n.start(t); n.stop(t + .1);
+        dbg(hi ? 'tick' : 'thump', 0, t);
+      };
+
+      let step = 0, nextT = t0 + .12, timer = 0;
+      const pump = () => { // the lookahead: everything lands on the audio clock, ahead of time
+        while (nextT < ctx.currentTime + .2) {
+          const sec = (step >> 5) & 1, i = step & 31, bar = (step >> 3) & 3, slot = i & 7;
+          const n = (sec ? MUS_LEAD_B : MUS_LEAD_A)[i];
+          if (n) leadNote(NOTE(n), nextT);
+          if (!(slot & 1)) bassNote(NOTE((sec ? MUS_BASS_B : MUS_BASS_A)[bar]), nextT); // quarter pulse
+          if (slot === 0) { musDbg.bars++; tick(nextT, .028, false); } // lub…
+          if (slot === 1) tick(nextT, .016, false);                    // …dub
+          if (sec && slot === 4) tick(nextT, .012, true);              // B-section footstep
+          step++; nextT += MUS_8TH;
+        }
+      };
+      pump();
+      timer = setInterval(pump, 80);
+      out.gain.setTargetAtTime(1, t0, .8); // the bus fades the loop in; levels live in the voices
+      mus = { stop(){
+        clearInterval(timer);
+        try {
+          const e = ctx.currentTime;
+          out.gain.setTargetAtTime(0, e, .22); // the ≤200ms already-scheduled tail rides the fade
+          vib.stop(e + .8);
+          setTimeout(() => { try { out.disconnect(); } catch {} }, 1300);
+        } catch {}
+      } };
+    } catch { mus = null; }
+  }
+
+  function musicStop(){ if (!mus) return; try { mus.stop(); } catch {} mus = null; }
 
   let drive = [];    // oscillators of the FIGHT BACK drive layer — cancelled on death/expiry
-  return { unlock, setMuted, onReady: cb => { readyCb = cb; }, ui, blip, kill, hit, hurt, lungeWarn, wave, frenzy, death, best, droneStart, droneStop, scatter, driveStop };
+  function _debug(){ // music counters + audio state — for headless verification only
+    return { bars: musDbg.bars, notes: musDbg.notes, starts: musDbg.starts,
+             playing: !!mus, events: musDbg.events.slice(),
+             ctxState: ctx ? ctx.state : 'none', masterGain: master ? master.gain.value : null };
+  }
+  return { unlock, setMuted, onReady: cb => { readyCb = cb; }, ui, blip, kill, hit, hurt, lungeWarn, wave, frenzy, death, best, musicStart, musicStop, scatter, driveStop, _debug };
 })();
 ;
 
@@ -1767,6 +1818,16 @@ let maxLen = 3;                        // longest the chain has been — medics 
 let nextSpawnAt = 0, waveNextAt = 0, frenzyUntil = 0;
 let stains = [], particles = [];
 let deathAt = 0, hurtAt = 0, headFlashUntil = 0, deathCause = '', overTimer = 0;
+let deathShot = null; // the final living board — captured at die(), before any death juice
+
+function captureDeathShot(){
+  try {
+    const s = document.createElement('canvas');
+    s.width = canvas.width; s.height = canvas.height; // device-pixel backing — crisp on the card
+    s.getContext('2d').drawImage(canvas, 0, 0);        // one blit, no encode — death stays cheap
+    deathShot = s;
+  } catch { deathShot = null; }
+}
 
 /* ═══════════════ helpers ═══════════════ */
 
@@ -1844,11 +1905,11 @@ function startGame(d) {
   syncPauseBtn();
   if (muted) showToast(t('soundOff'), { warn: true, quick: true }); // brief reminder while starting muted
   SND.ui();
-  SND.droneStart();
+  SND.musicStart();
 }
 
-function pause()  { if (state !== 'playing') return; state = 'paused'; show(ovPause); syncPauseBtn(); SND.droneStop(); }
-function resume() { if (state !== 'paused')  return; state = 'playing'; hideOverlays(); syncPauseBtn(); SND.droneStart(); }
+function pause()  { if (state !== 'playing') return; state = 'paused'; show(ovPause); syncPauseBtn(); SND.musicStop(); }
+function resume() { if (state !== 'paused')  return; state = 'playing'; hideOverlays(); syncPauseBtn(); SND.musicStart(); }
 
 function syncPauseBtn() {
   btnPause.classList.toggle('is-paused', state === 'paused');
@@ -1885,7 +1946,7 @@ function step() {
         const lost = Math.min(1, snake.length - 1);
         for (let l = 0; l < lost; l++) { snake.pop(); roster.pop(); }
         burst((zn.x + .5) * CELL, (zn.y + .5) * CELL, ['#7da87b', '#a3f160'], 8);
-        hurtAt = gt + 350; shake('md'); SND.hurt(f.x);
+        hurtAt = gt + 350; shake('md'); SND.hurt(zn.x);
         if (snake.length < SNAKE_MIN) { die('picked'); return; }
         break;
       }
@@ -2056,10 +2117,11 @@ function bite(f, idx) {
 
 function die(cause) {
   if (state !== 'playing' && state !== 'dying') return;
+  captureDeathShot(); // freeze the exact frame the player saw — before the flash, before the overlay
   state = 'over';
   deathCause = cause;
   deathAt = gt;
-  SND.droneStop();
+  SND.musicStop();
   SND.death();
   shake('lg');
   finish();
@@ -2802,7 +2864,7 @@ function drawShareCardRaw(c) {
   c.shadowColor = 'rgba(255,209,102,.35)'; c.shadowBlur = 36;
   c.fillStyle = '#ffd166';
   const scoreStr = fmt(score);
-  const scorePx = Math.min(216, 560 / Math.max(1, scoreStr.length - 1)); // a freak 5-digit run still fits
+  const scorePx = scoreStr.length <= 4 ? 216 : Math.min(216, (530 / scoreStr.length - 4) / .6); // a freak 5-digit run still fits
   c.font = `700 ${scorePx}px ${CARD_MONO}`; track('4px');
   c.fillText(scoreStr, M, 548);
   c.shadowBlur = 0; track('0px');
@@ -2844,8 +2906,24 @@ function drawShareCardRaw(c) {
   c.font = `italic 600 34px ${CARD_SANS}`;
   c.fillText(t('cardCta'), M, 898);
 
-  /* the scene — the game's own characters, drawn by the game's own
-     renderer: the chain fleeing up-right, the horde closing in */
+  /* the scene. New best → the real final board, the exact frame the
+     player saw when the run ended. Any other death → the game's own
+     characters, drawn by the game's own renderer: the chain fleeing
+     up-right, the horde closing in. */
+  if (lastRunNewBest && deathShot) {
+    const sx = 620, shy = 402, side = 376;
+    c.save();                          // a plate for the relic — shadow first, then the photo
+    c.shadowColor = 'rgba(0,0,0,.55)'; c.shadowBlur = 44; c.shadowOffsetY = 16;
+    c.fillStyle = '#0d1413';
+    c.beginPath(); c.roundRect(sx - 6, shy - 6, side + 12, side + 12, 20); c.fill();
+    c.restore();
+    c.save();
+    c.beginPath(); c.roundRect(sx, shy, side, side, 16); c.clip();
+    c.drawImage(deathShot, sx, shy, side, side); // scaled clean, letterboxed by the square plate
+    c.restore();
+    c.strokeStyle = 'rgba(163,241,96,.30)'; c.lineWidth = 3; // the frame's HUD line
+    c.beginPath(); c.roundRect(sx, shy, side, side, 16); c.stroke();
+  } else {
   const T = 2400; // fixed clock → a well-paced, deterministic stride
   const pos = [ { x: 762, y: 798 }, { x: 792, y: 700 }, { x: 826, y: 612 }, { x: 872, y: 546 }, { x: 930, y: 468 } ]; // tail → leader
   for (const [gx, gy, gw, gh] of [[690, 545, 88, 128], [958, 692, 78, 112]]) { // gravestones
@@ -2910,6 +2988,7 @@ function drawShareCardRaw(c) {
   c.strokeStyle = 'rgba(163,241,96,.35)'; // the leader's marker ring
   c.lineWidth = 6;
   c.beginPath(); c.arc(pos[pos.length - 1].x, pos[pos.length - 1].y, 63, 0, 7); c.stroke();
+  }
 
   /* vignette */
   const vg = c.createRadialGradient(W / 2, W / 2, W * .34, W / 2, W / 2, W * .74);
@@ -3007,7 +3086,7 @@ btnMute.addEventListener('click', e => {
   SND.setMuted(muted);
   syncMuteBtn();
   showToast(muted ? t('soundOff') : t('soundOn'), { quick: true, warn: muted }); // symmetric feedback — a stray tap explains itself
-  if (!muted && state === 'playing') SND.droneStart(); // bring the drone back
+  if (!muted && state === 'playing') SND.musicStart(); // bring the music back
 });
 ovStart.addEventListener('click', () => startGame());
 ovPause.addEventListener('click', () => {
@@ -3624,7 +3703,7 @@ SND.setMuted(muted);   // applies to the context once a gesture unlocks it
 if (muted) showToast(t('mutedBoot'), { warn: true, slow: true }); // discoverability: silent boots explain themselves
 SND.onReady(() => {    // one-time "audio armed" confirmation (suspended→running)
   showToast(t('soundOn'), { quick: true });
-  if (state === 'playing') SND.droneStart();   // game began before audio unlocked
+  if (state === 'playing') SND.musicStart();   // game began before audio unlocked
 });
 document.querySelectorAll('.build-tag').forEach(el => el.textContent = BUILD);
 requestAnimationFrame(frame);
@@ -3666,6 +3745,11 @@ if (/[?&]__test__/.test(location.search)) {
     setLang(l) { LANG = l; applyLang(); },
     setBest(v) { best = v; },
     forceOver(s, w, k) { score = s; wave = w; kills = k; finish(); },
+    setRun(s, w, k) { score = s; wave = w; kills = k; },
+    dieNow(cause) { die(cause); },
+    setStepMs(v) { stepMs = v; }, // slow the chain so a run survives long music tests
+    clearFoes() { foes.length = 0; allies.length = 0; },
+    snd: SND,
     get lastCard() { return lastCard; },
     get pillBestHidden() { return pillBest.hidden; },
     get state() { return state; },

@@ -29,8 +29,12 @@ const log = document.getElementById('log');
 const lines = [];
 function say(msg, cls) {
   lines.push((cls === 'ok' ? '✓ ' : cls === 'bad' ? '✗ ' : '· ') + msg);
-  log.innerHTML = lines.map(l =>
-    '<div class="' + (l[0] === '✓' ? 'ok' : l[0] === '✗' ? 'bad' : 'dim') + '">' + l.slice(2) + '</div>').join('');
+  log.replaceChildren(...lines.map(l => {
+    const d = document.createElement('div');
+    d.className = l[0] === '✓' ? 'ok' : l[0] === '✗' ? 'bad' : 'dim';
+    d.textContent = l.slice(2);
+    return d;
+  }));
 }
 say('iOS says: ' + (navigator.userAgent.match(/OS (\d+_\d+)/)?.[1] || 'not iOS?'));
 say('AudioContext: ' + (window.AudioContext ? 'supported' : 'MISSING'));

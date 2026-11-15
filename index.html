@@ -213,6 +213,41 @@
   @media (max-width:430px){ .lang-pick{ font-size:10px; padding:0 22px 0 10px; } }
   .btn--ghost{ background:transparent; border:1px solid #2f3d35; color:var(--muted); }
   .btn--ghost:hover{ background:#18231e; color:#c6d6c9; }
+
+  /* ── exit — forfeits the run; two taps so it's never an accident ── */
+  #btn-exit{ margin-top:8px; position:relative; }
+  #btn-exit::after{ content:''; position:absolute; inset:-5px; } /* generous hit area — the mute/pause pattern */
+  #btn-exit.confirming{
+    border-color:var(--danger); color:var(--danger);
+    background:rgba(229,72,77,.09);
+  }
+
+  /* ── social share row — the desktop game-over card, where the native
+     sheet can't carry the PNG (these intents pass text + link; the Save
+     card download covers the image). Ghost tiles → brand color on
+     hover/focus, ≥40px targets, keyboard-focusable with a ring. ── */
+  #social-block{ display:flex; flex-direction:column; align-items:center; gap:13px; }
+  .social-row{ display:flex; align-items:center; gap:9px; }
+  .soc{
+    appearance:none; cursor:pointer;
+    width:42px; height:42px; border-radius:12px;
+    border:1px solid #2f3d35; background:transparent; color:var(--muted);
+    display:inline-flex; align-items:center; justify-content:center;
+    transition:color .16s ease, border-color .16s ease, background .16s ease,
+               transform .1s ease, box-shadow .16s ease;
+  }
+  .soc:hover, .soc:focus-visible{
+    color:var(--brand);
+    border-color:var(--brand);
+    background:rgba(255,255,255,.04);
+    box-shadow:0 0 18px -8px var(--brand);
+  }
+  .soc:active{ transform:scale(.92); }
+  .soc:focus-visible{ outline:2px solid var(--accent-2); outline-offset:2px; }
+  .share-divider{
+    width:160px; height:1px;
+    background:linear-gradient(90deg, transparent, #2f3d35 25%, #2f3d35 75%, transparent);
+  }
   .share-mini{ position:absolute; right:8px; bottom:4px; width:34px; height:34px; border-radius:10px; color:var(--muted); }
   .share-mini:hover{ color:#c6d6c9; }
   .share-mini::after{ content:''; position:absolute; inset:-4px; } /* ≥40px hit area */
@@ -681,8 +716,15 @@
           <rect x="8.3" y="2" width="3.2" height="10" rx="1.4"/>
         </svg>
         <h2 class="ov-title" data-t="paused">Paused</h2>
-        <p class="ov-hint key-only" data-t="pauseHintKeys">press <kbd>P</kbd> or <kbd>Space</kbd> — or click — to resume</p>
+        <p class="ov-hint key-only" data-t="pauseHintKeys">press <kbd>P</kbd>, <kbd>Esc</kbd> or <kbd>Space</kbd> — or click — to resume</p>
         <p class="ov-hint touch-only" data-t="pauseHintTouch">tap anywhere to resume</p>
+        <button class="btn btn--ghost" id="btn-exit">
+          <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true">
+            <path d="M11.9 7.3 8.6 10.6m3.3-3.3-3.3 0m3.3 0v3.3" transform="rotate(-45 11.9 7.3)" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9.9 11.7H3.6c-.7 0-1.3-.6-1.3-1.3V3.6c0-.7.6-1.3 1.3-1.3h6.3c.7 0 1.3.6 1.3 1.3v1.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span data-t="exitToTitle">Exit to title</span>
+        </button>
       </div>
 
       <!-- game-over screen -->
@@ -702,6 +744,48 @@
           </svg>
           <span data-t="restart">Run it back</span>
         </button>
+        <!-- social intents — desktop, where the native sheet can't attach the
+             PNG. The URL intents carry the run text + link; "Save card" (below
+             the divider) is the image path. Hidden wherever file share works. -->
+        <div id="social-block" hidden>
+          <div class="social-row" id="social-row" role="group" data-t-aria="ariaShareRow" aria-label="Share your run">
+            <button class="soc" data-soc="x" data-t-aria="ariaShareX" style="--brand:#e7e9ea">
+              <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>
+              </svg>
+            </button>
+            <button class="soc" data-soc="facebook" data-t-aria="ariaShareFacebook" style="--brand:#1877f2">
+              <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+            </button>
+            <button class="soc" data-soc="reddit" data-t-aria="ariaShareReddit" style="--brand:#ff4500">
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="5.1" r="1.9" fill="currentColor"/>
+                <path d="M12 6.9v3.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <path fill="currentColor" fill-rule="evenodd" d="M12 8.9c4.31 0 7.8 2.51 7.8 5.6s-3.49 5.6-7.8 5.6-7.8-2.51-7.8-5.6 3.49-5.6 7.8-5.6Zm-3.05 3.9a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Zm6.1 0a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"/>
+                <path d="M9.4 17.1c1.63 1.15 3.57 1.15 5.2 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <button class="soc" data-soc="line" data-t-aria="ariaShareLine" style="--brand:#06c755">
+              <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4.25 5.25H19.75A1.75 1.75 0 0 1 21.5 7v8a1.75 1.75 0 0 1-1.75 1.75h-8.35l-3.5 3.15c-.55.44-1.4.07-1.4-.64v-2.51h-.43A1.75 1.75 0 0 1 2.5 16V7a1.75 1.75 0 0 1 1.75-1.75Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                <text x="12" y="13.2" text-anchor="middle" font-size="5" font-weight="800" fill="currentColor" style="font-family:var(--sans)">LINE</text>
+              </svg>
+            </button>
+            <button class="soc" data-soc="linkedin" data-t-aria="ariaShareLinkedIn" style="--brand:#0a66c2">
+              <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.225 0z"/>
+              </svg>
+            </button>
+            <button class="soc" data-soc="whatsapp" data-t-aria="ariaShareWhatsApp" style="--brand:#25d366">
+              <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+              </svg>
+            </button>
+          </div>
+          <div class="share-divider" aria-hidden="true"></div>
+        </div>
         <button class="btn btn--ghost" id="btn-share">
           <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true">
             <path d="M7 10V2.4m0 0L4.3 5.1M7 2.4l2.7 2.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -753,6 +837,7 @@ const overTitle = $('over-title'), finalScore = $('final-score'),
 const btnPause  = $('btn-pause');
 const btnMute   = $('btn-mute');
 const btnSaveCard = $('btn-savecard');
+const socialBlock = $('social-block');
 const toastEl   = $('toast'), frenzyEl = $('frenzy'), frenzyFill = $('frenzy-fill'), frenzyLabel = $('frenzy-label');
 const readyTitle = $('ready-title'), readyText = $('ready-text'),
       legendEl = $('legend'), btnStartLabel = $('btn-start-label');
@@ -775,7 +860,9 @@ const I18N = {
     startH: 'Begin the run', 
     readyHintKeys: 'press any key to begin', readyHintTouch: 'tap to begin · swipe to steer',
     paused: 'Paused',
-    pauseHintKeys: 'press <kbd>P</kbd> or <kbd>Space</kbd> — or click — to resume',
+    exitToTitle: 'Exit to title',
+    exitConfirm: 'Abandon run?',
+    pauseHintKeys: 'press <kbd>P</kbd>, <kbd>Esc</kbd> or <kbd>Space</kbd> — or click — to resume',
     pauseHintTouch: 'tap anywhere to resume',
     finalScore: 'Final score', statsOne: '1 kill · wave {w}', statsMany: '{k} kills · wave {w}',
     overBest: 'Best {v}', newBest: 'New best', restart: 'Run it back',
@@ -785,6 +872,10 @@ const I18N = {
     shareText: 'I survived to wave {n} with {score} pts and {kills} kills in DEAD LINE — graveyard shift. Can you outlast me?',
     shareTextBest: 'New best in DEAD LINE — graveyard shift! Wave {n}, {score} pts, {kills} kills. Think you can outlast me?',
     shareGame: 'DEAD LINE — graveyard shift. Every wave brings a new, worse breed. Think you can outlast me?',
+    ariaShareRow: 'Share your run',
+    ariaShareX: 'Share on X', ariaShareFacebook: 'Share on Facebook', ariaShareReddit: 'Share on Reddit',
+    ariaShareLine: 'Share on LINE', ariaShareLinkedIn: 'Share on LinkedIn', ariaShareWhatsApp: 'Share on WhatsApp',
+    shareBlocked: 'Pop-up blocked — allow pop-ups to share',
     overHintKeys: 'press <kbd>R</kbd> to replay',
     overHintTouch: 'tap to replay',
     deathWall: 'Splat.', deathSelf: 'Tangled.', deathHeadH: 'Devoured.', deathPickedH: 'Picked clean.',
@@ -823,7 +914,9 @@ const I18N = {
     startH: '撤退を開始', 
     readyHintKeys: 'どれかのキーで開始', readyHintTouch: 'タップで開始 · スワイプで操る',
     paused: '一時停止',
-    pauseHintKeys: '<kbd>P</kbd> か <kbd>Space</kbd> — クリックでも再開',
+    exitToTitle: 'タイトルへ戻る',
+    exitConfirm: 'リタイアする？',
+    pauseHintKeys: '<kbd>P</kbd>・<kbd>Esc</kbd>・<kbd>Space</kbd> — クリックでも再開',
     pauseHintTouch: 'どこでもタップで再開',
     finalScore: '最終スコア', statsOne: '撃破 1 · 第{w}波', statsMany: '撃破 {k} · 第{w}波',
     overBest: '最高 {v}', newBest: '新記録！', restart: 'もう一回',
@@ -833,6 +926,10 @@ const I18N = {
     shareText: 'DEAD LINE — 墓場の夜番。ウェーブ{n}まで{score}ポイント・{kills}キルで生き延びた。君に越えられるかな？',
     shareTextBest: 'DEAD LINE — 墓場の夜番で新記録！ウェーブ{n}・{score}ポイント・{kills}キル。君に越えられるかな？',
     shareGame: 'DEAD LINE — 墓場の夜番。ウェーブごとに新たな厄介な奴が現れる。君に越えられるかな？',
+    ariaShareRow: 'リザルトをシェア',
+    ariaShareX: 'X でシェア', ariaShareFacebook: 'Facebook でシェア', ariaShareReddit: 'Reddit でシェア',
+    ariaShareLine: 'LINE でシェア', ariaShareLinkedIn: 'LinkedIn でシェア', ariaShareWhatsApp: 'WhatsApp でシェア',
+    shareBlocked: 'ポップアップがブロックされました — 許可してからシェア',
     overHintKeys: '<kbd>R</kbd> で再挑戦',
     overHintTouch: 'タップで再挑戦',
     deathWall: '潰れた。', deathSelf: '絡まった。', deathHeadH: '食い殺された。', deathPickedH: '食い尽くされた。',
@@ -871,7 +968,9 @@ const I18N = {
     startH: '开始撤离', 
     readyHintKeys: '按任意键开始', readyHintTouch: '点击开始 · 滑动转向',
     paused: '暂停',
-    pauseHintKeys: '按 <kbd>P</kbd> 或 <kbd>空格</kbd>——或点击——继续',
+    exitToTitle: '回到标题',
+    exitConfirm: '放弃这局？',
+    pauseHintKeys: '按 <kbd>P</kbd>、<kbd>Esc</kbd> 或 <kbd>空格</kbd>——或点击——继续',
     pauseHintTouch: '点击任意处继续',
     finalScore: '最终得分', statsOne: '击杀 1 · 第{w}波', statsMany: '击杀 {k} · 第{w}波',
     overBest: '最高 {v}', newBest: '新纪录！', restart: '再来一局',
@@ -881,6 +980,10 @@ const I18N = {
     shareText: '我在《DEAD LINE——墓园夜班》活到了第{n}波，{score}分、{kills}杀。你能撑得更久吗？',
     shareTextBest: '《DEAD LINE——墓园夜班》新纪录！第{n}波、{score}分、{kills}杀。你能撑得更久吗？',
     shareGame: '《DEAD LINE——墓园夜班》——每一波都有更凶的新变种。你能撑得更久吗？',
+    ariaShareRow: '分享战绩',
+    ariaShareX: '分享到 X', ariaShareFacebook: '分享到 Facebook', ariaShareReddit: '分享到 Reddit',
+    ariaShareLine: '分享到 LINE', ariaShareLinkedIn: '分享到 LinkedIn', ariaShareWhatsApp: '分享到 WhatsApp',
+    shareBlocked: '弹窗被拦截——请允许弹窗后再分享',
     overHintKeys: '按 <kbd>R</kbd> 重开',
     overHintTouch: '点击重开',
     deathWall: '拍扁了。', deathSelf: '缠死了。', deathHeadH: '被吞噬了。', deathPickedH: '被啃光了。',
@@ -919,7 +1022,9 @@ const I18N = {
     startH: '開始撤離', 
     readyHintKeys: '按任意鍵開始', readyHintTouch: '點擊開始 · 滑動轉向',
     paused: '暫停',
-    pauseHintKeys: '按 <kbd>P</kbd> 或 <kbd>空白鍵</kbd>——或點擊——繼續',
+    exitToTitle: '回到標題',
+    exitConfirm: '放棄這一局？',
+    pauseHintKeys: '按 <kbd>P</kbd>、<kbd>Esc</kbd> 或 <kbd>空白鍵</kbd>——或點擊——繼續',
     pauseHintTouch: '點擊任意處繼續',
     finalScore: '最終得分', statsOne: '擊殺 1 · 第{w}波', statsMany: '擊殺 {k} · 第{w}波',
     overBest: '最高 {v}', newBest: '新紀錄！', restart: '再來一局',
@@ -929,6 +1034,10 @@ const I18N = {
     shareText: '我在《DEAD LINE——墓園夜班》撐到了第{n}波，{score}分、{kills}殺。你撐得比我久嗎？',
     shareTextBest: '《DEAD LINE——墓園夜班》新紀錄！第{n}波、{score}分、{kills}殺。你撐得比我久嗎？',
     shareGame: '《DEAD LINE——墓園夜班》——每一波都有更凶的新變種。你撐得比我久嗎？',
+    ariaShareRow: '分享戰績',
+    ariaShareX: '分享到 X', ariaShareFacebook: '分享到 Facebook', ariaShareReddit: '分享到 Reddit',
+    ariaShareLine: '分享到 LINE', ariaShareLinkedIn: '分享到 LinkedIn', ariaShareWhatsApp: '分享到 WhatsApp',
+    shareBlocked: '彈出視窗被封鎖——請允許後再分享',
     overHintKeys: '按 <kbd>R</kbd> 重開',
     overHintTouch: '點擊重開',
     deathWall: '壓扁了。', deathSelf: '纏死了。', deathHeadH: '被吞噬了。', deathPickedH: '被啃光了。',
@@ -967,7 +1076,9 @@ const I18N = {
     startH: 'Empieza la huida', 
     readyHintKeys: 'pulsa una tecla para empezar', readyHintTouch: 'toca para empezar · desliza para girar',
     paused: 'Pausa',
-    pauseHintKeys: 'pulsa <kbd>P</kbd> o <kbd>Espacio</kbd> — o haz clic — para seguir',
+    exitToTitle: 'Salir al título',
+    exitConfirm: '¿Abandonar partida?',
+    pauseHintKeys: 'pulsa <kbd>P</kbd>, <kbd>Esc</kbd> o <kbd>Espacio</kbd> — o haz clic — para seguir',
     pauseHintTouch: 'toca en cualquier sitio para seguir',
     finalScore: 'Puntuación final', statsOne: '1 baja · oleada {w}', statsMany: '{k} bajas · oleada {w}',
     overBest: 'Récord {v}', newBest: '¡Nuevo récord!', restart: 'Otra ronda',
@@ -977,6 +1088,10 @@ const I18N = {
     shareText: 'Llegué a la oleada {n} con {score} pts y {kills} bajas en DEAD LINE. ¿Aguantas más que yo?',
     shareTextBest: '¡Nuevo récord en DEAD LINE! Oleada {n}, {score} pts, {kills} bajas. ¿Aguantas más que yo?',
     shareGame: 'DEAD LINE — turno de noche. Cada oleada trae una raza peor. ¿Aguantas más que yo?',
+    ariaShareRow: 'Comparte tu partida',
+    ariaShareX: 'Compartir en X', ariaShareFacebook: 'Compartir en Facebook', ariaShareReddit: 'Compartir en Reddit',
+    ariaShareLine: 'Compartir en LINE', ariaShareLinkedIn: 'Compartir en LinkedIn', ariaShareWhatsApp: 'Compartir en WhatsApp',
+    shareBlocked: 'Ventana emergente bloqueada — permite las ventanas emergentes para compartir',
     overHintKeys: 'pulsa <kbd>R</kbd> para repetir',
     overHintTouch: 'toca para repetir',
     deathWall: 'Chof.', deathSelf: 'Enredado.', deathHeadH: 'Devorado.', deathPickedH: 'Desvalijado.',
@@ -1015,7 +1130,9 @@ const I18N = {
     startH: 'Lancer la ruée', 
     readyHintKeys: 'appuie sur une touche pour commencer', readyHintTouch: 'touche pour commencer · glisse pour diriger',
     paused: 'Pause',
-    pauseHintKeys: 'appuie sur <kbd>P</kbd> ou <kbd>Espace</kbd> — ou clique — pour reprendre',
+    exitToTitle: 'Quitter au titre',
+    exitConfirm: 'Abandonner ?',
+    pauseHintKeys: 'appuie sur <kbd>P</kbd>, <kbd>Échap</kbd> ou <kbd>Espace</kbd> — ou clique — pour reprendre',
     pauseHintTouch: 'touche n’importe où pour reprendre',
     finalScore: 'Score final', statsOne: '1 élimination · vague {w}', statsMany: '{k} éliminations · vague {w}',
     overBest: 'Record {v}', newBest: 'Nouveau record !', restart: 'On remet ça',
@@ -1025,6 +1142,10 @@ const I18N = {
     shareText: 'J’ai tenu jusqu’à la vague {n} avec {score} pts et {kills} éliminations dans DEAD LINE. Tu tiendras plus longtemps ?',
     shareTextBest: 'Nouveau record dans DEAD LINE ! Vague {n}, {score} pts, {kills} éliminations. Tu tiendras plus longtemps ?',
     shareGame: 'DEAD LINE — garde de nuit. Chaque vague amène une pire espèce. Tu tiendras plus longtemps ?',
+    ariaShareRow: 'Partage ta partie',
+    ariaShareX: 'Partager sur X', ariaShareFacebook: 'Partager sur Facebook', ariaShareReddit: 'Partager sur Reddit',
+    ariaShareLine: 'Partager sur LINE', ariaShareLinkedIn: 'Partager sur LinkedIn', ariaShareWhatsApp: 'Partager sur WhatsApp',
+    shareBlocked: 'Pop-up bloquée — autorise les pop-ups pour partager',
     overHintKeys: 'appuie sur <kbd>R</kbd> pour rejouer',
     overHintTouch: 'touche pour rejouer',
     deathWall: 'Splat.', deathSelf: 'Emmêlé.', deathHeadH: 'Dévoré.', deathPickedH: 'Nettoyé.',
@@ -1063,7 +1184,9 @@ const I18N = {
     startH: 'Lauf starten', 
     readyHintKeys: 'beliebige Taste zum Start', readyHintTouch: 'tippen zum Start · wischen zum Lenken',
     paused: 'Pause',
-    pauseHintKeys: '<kbd>P</kbd> oder <kbd>Leertaste</kbd> — oder klicken — zum Fortsetzen',
+    exitToTitle: 'Zum Titel',
+    exitConfirm: 'Run abbrechen?',
+    pauseHintKeys: '<kbd>P</kbd>, <kbd>Esc</kbd> oder <kbd>Leertaste</kbd> — oder klicken — zum Fortsetzen',
     pauseHintTouch: 'zum Fortsetzen irgendwo tippen',
     finalScore: 'Endpunkte', statsOne: '1 Kill · Welle {w}', statsMany: '{k} Kills · Welle {w}',
     overBest: 'Rekord {v}', newBest: 'Neuer Rekord!', restart: 'Nochmal!',
@@ -1073,6 +1196,10 @@ const I18N = {
     shareText: 'Ich habe es in DEAD LINE bis Welle {n} geschafft — {score} Punkte, {kills} Kills. Hältst du länger durch?',
     shareTextBest: 'Neuer Rekord in DEAD LINE! Welle {n}, {score} Punkte, {kills} Kills. Hältst du länger durch?',
     shareGame: 'DEAD LINE — Nachtschicht. Jede Welle bringt eine schlimmere Rasse. Hältst du länger durch?',
+    ariaShareRow: 'Teile deinen Lauf',
+    ariaShareX: 'Auf X teilen', ariaShareFacebook: 'Auf Facebook teilen', ariaShareReddit: 'Auf Reddit teilen',
+    ariaShareLine: 'Auf LINE teilen', ariaShareLinkedIn: 'Auf LinkedIn teilen', ariaShareWhatsApp: 'Auf WhatsApp teilen',
+    shareBlocked: 'Pop-up blockiert — erlaube Pop-ups zum Teilen',
     overHintKeys: '<kbd>R</kbd> zum Neustart',
     overHintTouch: 'tippen zum Neustart',
     deathWall: 'Klatsch.', deathSelf: 'Verknotet.', deathHeadH: 'Verschlungen.', deathPickedH: 'Geplündert.',
@@ -1111,7 +1238,9 @@ const I18N = {
     startH: '탈주 시작', 
     readyHintKeys: '아무 키나 눌러 시작', readyHintTouch: '탭하여 시작 · 스와이프하여 조종',
     paused: '일시정지',
-    pauseHintKeys: '<kbd>P</kbd> 또는 <kbd>스페이스</kbd> — 클릭도 가능 — 계속하기',
+    exitToTitle: '타이틀로',
+    exitConfirm: '이번 판을 버릴까?',
+    pauseHintKeys: '<kbd>P</kbd>·<kbd>Esc</kbd> 또는 <kbd>스페이스</kbd> — 클릭도 가능 — 계속하기',
     pauseHintTouch: '아무 곳이나 탭하여 계속',
     finalScore: '최종 점수', statsOne: '처치 1 · 제{w}파', statsMany: '처치 {k} · 제{w}파',
     overBest: '최고 {v}', newBest: '신기록!', restart: '다시 도전',
@@ -1121,6 +1250,10 @@ const I18N = {
     shareText: 'DEAD LINE에서 제{n}파까지 생존 — {score}점, {kills}킬. 네가 더 오래 버틸 수 있겠어?',
     shareTextBest: 'DEAD LINE 신기록! 제{n}파, {score}점, {kills}킬. 네가 더 오래 버틸 수 있겠어?',
     shareGame: 'DEAD LINE — 묘지 야근. 매 웨이브마다 더 흉포한 놈이 나타난다. 네가 더 오래 버틸 수 있겠어?',
+    ariaShareRow: '결과 공유하기',
+    ariaShareX: 'X에 공유', ariaShareFacebook: 'Facebook에 공유', ariaShareReddit: 'Reddit에 공유',
+    ariaShareLine: 'LINE에 공유', ariaShareLinkedIn: 'LinkedIn에 공유', ariaShareWhatsApp: 'WhatsApp에 공유',
+    shareBlocked: '팝업이 차단됐어 — 공유하려면 팝업을 허용해줘',
     overHintKeys: '<kbd>R</kbd> 재도전',
     overHintTouch: '탭하여 재도전',
     deathWall: '으깨졌다.', deathSelf: '엉켜 쓰러졌다.', deathHeadH: '잡아먹혔다.', deathPickedH: '뜯어먹혔다.',
@@ -1184,6 +1317,8 @@ function applyLang() { // live re-render of every string without a reload
   const md = document.querySelector('meta[name="description"]');
   if (md) md.setAttribute('content', t('meta'));
   for (const el of document.querySelectorAll('[data-t]')) el.innerHTML = t(el.dataset.t);
+  for (const el of document.querySelectorAll('[data-t-aria]')) el.setAttribute('aria-label', t(el.dataset.tAria));
+  for (const b of document.querySelectorAll('.soc')) b.title = t(b.dataset.tAria); // tooltip mirrors the aria-label
   frameEl.setAttribute('aria-label', t('ariaFrame'));
   canvas.setAttribute('aria-label', t('ariaBoard'));
   langPick.setAttribute('aria-label', t('ariaLang'));
@@ -1265,7 +1400,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.14.8'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.15'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 /* ═══════════════ the breed ladder — 100 rungs, one per wave ═══════════════
@@ -1899,6 +2034,7 @@ function reset() {
 
 function startGame(d) {
   reset();
+  resetExitConfirm();
   if (d && !(d.x === -1 && d.y === 0)) dir = d; // can't launch into your own body
   state = 'playing';
   hideOverlays();
@@ -1908,8 +2044,44 @@ function startGame(d) {
   SND.musicStart();
 }
 
-function pause()  { if (state !== 'playing') return; state = 'paused'; show(ovPause); syncPauseBtn(); SND.musicStop(); }
-function resume() { if (state !== 'paused')  return; state = 'playing'; hideOverlays(); syncPauseBtn(); SND.musicStart(); }
+function pause()  { if (state !== 'playing') return; state = 'paused'; show(ovPause); resetExitConfirm(); syncPauseBtn(); SND.musicStop(); }
+function resume() { if (state !== 'paused')  return; state = 'playing'; hideOverlays(); resetExitConfirm(); syncPauseBtn(); SND.musicStart(); }
+
+/* ── exit to title — the run is forfeited ──
+   Second tap of the two-step confirm lands here. finish() never runs,
+   so a forfeited run cannot touch the stored best — quit-while-ahead
+   banks nothing. reset() gives back the boot state (chain, roster,
+   foes, allies, zones, particles, pickup, counters, toasts, juice). */
+const btnExit = $('btn-exit');
+let exitArmedAt = 0, exitConfirmTimer = 0;
+
+function resetExitConfirm(){
+  clearTimeout(exitConfirmTimer);
+  exitArmedAt = 0;
+  btnExit.classList.remove('confirming');
+  btnExit.querySelector('span').textContent = t('exitToTitle');
+}
+
+function exitToTitle(){
+  reset();
+  state = 'start';            // no death flow, no game-over card, no share
+  show(ovStart);
+  syncPauseBtn();
+  SND.musicStop();            // belt over suspenders — pause() already stopped it
+  resetExitConfirm();
+}
+
+btnExit.addEventListener('click', e => {
+  e.stopPropagation();        // the overlay behind us means "resume" — this means exit
+  e.currentTarget.blur();
+  SND.ui();
+  if (exitArmedAt && performance.now() - exitArmedAt < 3000) { exitToTitle(); return; }
+  exitArmedAt = performance.now();
+  btnExit.classList.add('confirming');
+  btnExit.querySelector('span').textContent = t('exitConfirm');
+  clearTimeout(exitConfirmTimer);
+  exitConfirmTimer = setTimeout(resetExitConfirm, 3000); // one breath to reconsider
+});
 
 function syncPauseBtn() {
   btnPause.classList.toggle('is-paused', state === 'paused');
@@ -2140,6 +2312,7 @@ function finish() {
   pillBest.hidden        = !newBest;
   lastRunNewBest        = newBest;
   btnSaveCard.hidden    = canShareFiles(); // no image share on this browser → the card is downloadable instead
+  socialBlock.hidden    = canShareFiles(); // same audience: desktops get URL-intent sharing (text + link; Save card carries the PNG)
   updateHud();
   overTimer = setTimeout(() => show(ovOver), 620); // let the death land first
 }
@@ -2590,17 +2763,20 @@ window.addEventListener('keydown', e => {
       break;
     case 'playing':
       if (d) queueDir(d);
-      else if (e.code === 'KeyP' || e.code === 'Space') pause();
+      else if (e.code === 'KeyP' || e.code === 'Space' || e.code === 'Escape') pause();
       else if (e.code === 'KeyR') startGame();
       break;
     case 'paused':
       if (d) { resume(); queueDir(d); }
-      else if (e.code === 'KeyP' || e.code === 'Space' || e.code === 'Enter') resume();
+      else if (e.code === 'KeyP' || e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape') resume();
       else if (e.code === 'KeyR') startGame();
       break;
     case 'over':
+      // a focused button (Share, Save card, the social row) owns Enter/Space —
+      // activating it must not ALSO restart the run behind it
+      if ((e.code === 'Enter' || e.code === 'Space') && e.target.closest('button')) break;
       if (e.code === 'KeyR' || e.code === 'Enter' || e.code === 'Space') startGame();
-      break;
+      break; // Esc stays inert on start/game-over — exit only lives on the pause screen
   }
 });
 
@@ -3064,6 +3240,39 @@ function shareGame() {
 $('btn-share').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); SND.ui(); shareRun(); });
 btnSaveCard.addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); SND.ui(); saveCard(); });
 $('btn-share-game').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); SND.ui(); shareGame(); });
+
+/* ── social share row — desktop game-over card ──────────────────────────
+   Where navigator.canShare({files}) is false (desktops), the native sheet
+   can't attach the PNG. These URL intents carry the localized run text +
+   the game link; "Save card" below the divider is the image path. Each
+   opens the platform's share intent in a new tab. window.open is called
+   WITHOUT 'noopener' — that arg makes it return null by spec, and the
+   return value is how a blocked popup is detected; the opener link is
+   severed by hand instead, so the semantics match. */
+const SITE_URL = 'https://robenten.github.io/dead-line/';
+const shareLink = () => SITE_URL + '?v=' + BUILD.slice(1); // bust the ~10min page cache, built from constants
+const SOCIAL_INTENTS = {
+  x:        (text, url) => `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
+  facebook: (text, url) => `https://www.facebook.com/sharer/sharer.php?u=${url}`,
+  reddit:   (text, url) => `https://www.reddit.com/submit?url=${url}&title=${text}`,
+  line:     (text, url) => `https://social-plugins.line.me/lineit/share?url=${url}`,
+  linkedin: (text, url) => `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
+  whatsapp: (text, url) => `https://wa.me/?text=${text}%20${url}`, // WhatsApp has no url param — text carries both
+};
+socialBlock.addEventListener('click', e => {
+  const b = e.target.closest('.soc');
+  if (!b) return;
+  e.stopPropagation();            // the card behind us means "replay" — this shares
+  b.blur();
+  SND.ui();
+  const p = { n: wave, score: fmt(score), kills };
+  const text = lastRunNewBest ? t('shareTextBest', p) : t('shareText', p);
+  const encText = encodeURIComponent(text), encUrl = encodeURIComponent(shareLink());
+  const u = SOCIAL_INTENTS[b.dataset.soc](encText, encUrl);
+  const w = window.open(u, '_blank');
+  if (w) { try { w.opener = null; } catch {} } // cut the opener — noopener semantics, detectably
+  else showToast(t('shareBlocked'), { quick: true }); // popup blocker — say so instead of failing silently
+});
 langPick.addEventListener('click', e => e.stopPropagation()); // picking a language isn't "begin"
 btnPause.addEventListener('click', e => {
   e.stopPropagation(); e.currentTarget.blur();
@@ -3753,6 +3962,13 @@ if (/[?&]__test__/.test(location.search)) {
     get lastCard() { return lastCard; },
     get pillBestHidden() { return pillBest.hidden; },
     get state() { return state; },
+    get boardState() { // the whole yard, for fresh-run assertions
+      return { foes: foes.length, allies: allies.length, zones: zones.length,
+               particles: particles.length, pops: pops.length, stains: stains.length,
+               pickup: !!pickup, score, wave, kills, snake: snake.length };
+    },
+    get best() { return best; },
+    exitToTitle,
     t, I18N,
   };
 }

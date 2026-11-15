@@ -248,6 +248,38 @@
     width:160px; height:1px;
     background:linear-gradient(90deg, transparent, #2f3d35 25%, #2f3d35 75%, transparent);
   }
+
+  /* ── share popover — the start screen's desktop affordance ──
+     The social row lives on the game-over card, so the game was intent-
+     unshareable until you died. This popover offers the same six tiles
+     for the GAME itself, anchored above the mini share button (bottom-
+     right), well clear of the language picker (bottom-left). */
+  #share-pop{
+    position:absolute; right:10px; bottom:50px; z-index:6;
+    display:flex; flex-direction:column; align-items:center; gap:11px;
+    padding:13px 13px 11px;
+    background:var(--panel);
+    border:1px solid #2f3d35; border-radius:13px;
+    box-shadow:
+      0 24px 60px -18px rgba(0,0,0,.85),
+      0 0 0 1px rgba(0,0,0,.4),
+      inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  #share-pop:not([hidden]){ animation:popIn .18s cubic-bezier(.2,.7,.2,1); }
+  @keyframes popIn{ from{ opacity:0; transform:translateY(7px) scale(.97); } }
+  .copy-link{
+    appearance:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%;
+    font:700 11px/1 var(--sans);
+    letter-spacing:.16em; text-transform:uppercase; text-indent:.16em;
+    color:var(--muted); background:transparent;
+    border:1px solid #2f3d35; border-radius:9px;
+    padding:11px 14px;
+    transition:color .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .copy-link:hover{ color:#c6d6c9; background:#18231e; }
+  .copy-link:focus-visible{ outline:2px solid var(--accent-2); outline-offset:2px; }
   .share-mini{ position:absolute; right:8px; bottom:4px; width:34px; height:34px; border-radius:10px; color:var(--muted); }
   .share-mini:hover{ color:#c6d6c9; }
   .share-mini::after{ content:''; position:absolute; inset:-4px; } /* ≥40px hit area */
@@ -698,7 +730,7 @@
           <option value="de">Deutsch</option>
           <option value="ko">한국어</option>
         </select>
-        <button class="icon-btn share-mini" id="btn-share-game" aria-label="Share the game">
+        <button class="icon-btn share-mini" id="btn-share-game" data-t-aria="ariaShareGame" aria-label="Share the game">
           <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
             <path d="M7 10V2.4m0 0L4.3 5.1M7 2.4l2.7 2.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M2.6 8.6v2.1c0 .7.6 1.3 1.3 1.3h6.2c.7 0 1.3-.6 1.3-1.3V8.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
@@ -707,6 +739,23 @@
         <span class="build-tag" id="build-role"></span>
         <p class="ov-hint pulse key-only" data-t="readyHintKeys">press any key to begin</p>
         <p class="ov-hint pulse touch-only" data-t="readyHintTouch">tap to begin · swipe to steer</p>
+      </div>
+
+      <!-- share popover — the start screen's desktop share affordance (phones
+           keep the native sheet). Anchored above the mini share button at the
+           board's bottom-right; the language picker sits bottom-left, well
+           clear. The tiles are rendered by the same SOC_TILES as the
+           game-over row. -->
+      <div id="share-pop" hidden role="group" data-t-aria="ariaShareGame" aria-label="Share the game">
+        <div class="social-row" id="social-row-game"></div>
+        <div class="share-divider" aria-hidden="true"></div>
+        <button class="copy-link" id="btn-copy-link">
+          <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true">
+            <rect x="4.6" y="4.6" width="7" height="7" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M9.4 2.8H3.4c-.9 0-1.6.7-1.6 1.6v6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <span data-t="copyLink">Copy link</span>
+        </button>
       </div>
 
       <!-- pause screen -->
@@ -748,42 +797,9 @@
              PNG. The URL intents carry the run text + link; "Save card" (below
              the divider) is the image path. Hidden wherever file share works. -->
         <div id="social-block" hidden>
-          <div class="social-row" id="social-row" role="group" data-t-aria="ariaShareRow" aria-label="Share your run">
-            <button class="soc" data-soc="x" data-t-aria="ariaShareX" style="--brand:#e7e9ea">
-              <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
-                <path fill="currentColor" d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>
-              </svg>
-            </button>
-            <button class="soc" data-soc="facebook" data-t-aria="ariaShareFacebook" style="--brand:#1877f2">
-              <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
-                <path fill="currentColor" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-              </svg>
-            </button>
-            <button class="soc" data-soc="reddit" data-t-aria="ariaShareReddit" style="--brand:#ff4500">
-              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="12" cy="5.1" r="1.9" fill="currentColor"/>
-                <path d="M12 6.9v3.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                <path fill="currentColor" fill-rule="evenodd" d="M12 8.9c4.31 0 7.8 2.51 7.8 5.6s-3.49 5.6-7.8 5.6-7.8-2.51-7.8-5.6 3.49-5.6 7.8-5.6Zm-3.05 3.9a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Zm6.1 0a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"/>
-                <path d="M9.4 17.1c1.63 1.15 3.57 1.15 5.2 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-            </button>
-            <button class="soc" data-soc="line" data-t-aria="ariaShareLine" style="--brand:#06c755">
-              <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4.25 5.25H19.75A1.75 1.75 0 0 1 21.5 7v8a1.75 1.75 0 0 1-1.75 1.75h-8.35l-3.5 3.15c-.55.44-1.4.07-1.4-.64v-2.51h-.43A1.75 1.75 0 0 1 2.5 16V7a1.75 1.75 0 0 1 1.75-1.75Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-                <text x="12" y="13.2" text-anchor="middle" font-size="5" font-weight="800" fill="currentColor" style="font-family:var(--sans)">LINE</text>
-              </svg>
-            </button>
-            <button class="soc" data-soc="linkedin" data-t-aria="ariaShareLinkedIn" style="--brand:#0a66c2">
-              <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-                <path fill="currentColor" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.225 0z"/>
-              </svg>
-            </button>
-            <button class="soc" data-soc="whatsapp" data-t-aria="ariaShareWhatsApp" style="--brand:#25d366">
-              <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
-                <path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-              </svg>
-            </button>
-          </div>
+          <!-- the six tiles are rendered by JS (SOC_TILES) — shared with the
+               start-screen share popover so the two never drift apart -->
+          <div class="social-row" id="social-row" role="group" data-t-aria="ariaShareRow" aria-label="Share your run"></div>
           <div class="share-divider" aria-hidden="true"></div>
         </div>
         <button class="btn btn--ghost" id="btn-share">
@@ -873,6 +889,7 @@ const I18N = {
     shareTextBest: 'New best in DEAD LINE — graveyard shift! Wave {n}, {score} pts, {kills} kills. Think you can outlast me?',
     shareGame: 'DEAD LINE — graveyard shift. Every wave brings a new, worse breed. Think you can outlast me?',
     ariaShareRow: 'Share your run',
+    ariaShareGame: 'Share the game', copyLink: 'Copy link',
     ariaShareX: 'Share on X', ariaShareFacebook: 'Share on Facebook', ariaShareReddit: 'Share on Reddit',
     ariaShareLine: 'Share on LINE', ariaShareLinkedIn: 'Share on LinkedIn', ariaShareWhatsApp: 'Share on WhatsApp',
     shareBlocked: 'Pop-up blocked — allow pop-ups to share',
@@ -927,6 +944,7 @@ const I18N = {
     shareTextBest: 'DEAD LINE — 墓場の夜番で新記録！ウェーブ{n}・{score}ポイント・{kills}キル。君に越えられるかな？',
     shareGame: 'DEAD LINE — 墓場の夜番。ウェーブごとに新たな厄介な奴が現れる。君に越えられるかな？',
     ariaShareRow: 'リザルトをシェア',
+    ariaShareGame: 'ゲームをシェア', copyLink: 'リンクをコピー',
     ariaShareX: 'X でシェア', ariaShareFacebook: 'Facebook でシェア', ariaShareReddit: 'Reddit でシェア',
     ariaShareLine: 'LINE でシェア', ariaShareLinkedIn: 'LinkedIn でシェア', ariaShareWhatsApp: 'WhatsApp でシェア',
     shareBlocked: 'ポップアップがブロックされました — 許可してからシェア',
@@ -981,6 +999,7 @@ const I18N = {
     shareTextBest: '《DEAD LINE——墓园夜班》新纪录！第{n}波、{score}分、{kills}杀。你能撑得更久吗？',
     shareGame: '《DEAD LINE——墓园夜班》——每一波都有更凶的新变种。你能撑得更久吗？',
     ariaShareRow: '分享战绩',
+    ariaShareGame: '分享游戏', copyLink: '复制链接',
     ariaShareX: '分享到 X', ariaShareFacebook: '分享到 Facebook', ariaShareReddit: '分享到 Reddit',
     ariaShareLine: '分享到 LINE', ariaShareLinkedIn: '分享到 LinkedIn', ariaShareWhatsApp: '分享到 WhatsApp',
     shareBlocked: '弹窗被拦截——请允许弹窗后再分享',
@@ -1035,6 +1054,7 @@ const I18N = {
     shareTextBest: '《DEAD LINE——墓園夜班》新紀錄！第{n}波、{score}分、{kills}殺。你撐得比我久嗎？',
     shareGame: '《DEAD LINE——墓園夜班》——每一波都有更凶的新變種。你撐得比我久嗎？',
     ariaShareRow: '分享戰績',
+    ariaShareGame: '分享遊戲', copyLink: '複製連結',
     ariaShareX: '分享到 X', ariaShareFacebook: '分享到 Facebook', ariaShareReddit: '分享到 Reddit',
     ariaShareLine: '分享到 LINE', ariaShareLinkedIn: '分享到 LinkedIn', ariaShareWhatsApp: '分享到 WhatsApp',
     shareBlocked: '彈出視窗被封鎖——請允許後再分享',
@@ -1089,6 +1109,7 @@ const I18N = {
     shareTextBest: '¡Nuevo récord en DEAD LINE! Oleada {n}, {score} pts, {kills} bajas. ¿Aguantas más que yo?',
     shareGame: 'DEAD LINE — turno de noche. Cada oleada trae una raza peor. ¿Aguantas más que yo?',
     ariaShareRow: 'Comparte tu partida',
+    ariaShareGame: 'Compartir el juego', copyLink: 'Copiar enlace',
     ariaShareX: 'Compartir en X', ariaShareFacebook: 'Compartir en Facebook', ariaShareReddit: 'Compartir en Reddit',
     ariaShareLine: 'Compartir en LINE', ariaShareLinkedIn: 'Compartir en LinkedIn', ariaShareWhatsApp: 'Compartir en WhatsApp',
     shareBlocked: 'Ventana emergente bloqueada — permite las ventanas emergentes para compartir',
@@ -1143,6 +1164,7 @@ const I18N = {
     shareTextBest: 'Nouveau record dans DEAD LINE ! Vague {n}, {score} pts, {kills} éliminations. Tu tiendras plus longtemps ?',
     shareGame: 'DEAD LINE — garde de nuit. Chaque vague amène une pire espèce. Tu tiendras plus longtemps ?',
     ariaShareRow: 'Partage ta partie',
+    ariaShareGame: 'Partager le jeu', copyLink: 'Copier le lien',
     ariaShareX: 'Partager sur X', ariaShareFacebook: 'Partager sur Facebook', ariaShareReddit: 'Partager sur Reddit',
     ariaShareLine: 'Partager sur LINE', ariaShareLinkedIn: 'Partager sur LinkedIn', ariaShareWhatsApp: 'Partager sur WhatsApp',
     shareBlocked: 'Pop-up bloquée — autorise les pop-ups pour partager',
@@ -1197,6 +1219,7 @@ const I18N = {
     shareTextBest: 'Neuer Rekord in DEAD LINE! Welle {n}, {score} Punkte, {kills} Kills. Hältst du länger durch?',
     shareGame: 'DEAD LINE — Nachtschicht. Jede Welle bringt eine schlimmere Rasse. Hältst du länger durch?',
     ariaShareRow: 'Teile deinen Lauf',
+    ariaShareGame: 'Spiel teilen', copyLink: 'Link kopieren',
     ariaShareX: 'Auf X teilen', ariaShareFacebook: 'Auf Facebook teilen', ariaShareReddit: 'Auf Reddit teilen',
     ariaShareLine: 'Auf LINE teilen', ariaShareLinkedIn: 'Auf LinkedIn teilen', ariaShareWhatsApp: 'Auf WhatsApp teilen',
     shareBlocked: 'Pop-up blockiert — erlaube Pop-ups zum Teilen',
@@ -1251,6 +1274,7 @@ const I18N = {
     shareTextBest: 'DEAD LINE 신기록! 제{n}파, {score}점, {kills}킬. 네가 더 오래 버틸 수 있겠어?',
     shareGame: 'DEAD LINE — 묘지 야근. 매 웨이브마다 더 흉포한 놈이 나타난다. 네가 더 오래 버틸 수 있겠어?',
     ariaShareRow: '결과 공유하기',
+    ariaShareGame: '게임 공유', copyLink: '링크 복사',
     ariaShareX: 'X에 공유', ariaShareFacebook: 'Facebook에 공유', ariaShareReddit: 'Reddit에 공유',
     ariaShareLine: 'LINE에 공유', ariaShareLinkedIn: 'LinkedIn에 공유', ariaShareWhatsApp: 'WhatsApp에 공유',
     shareBlocked: '팝업이 차단됐어 — 공유하려면 팝업을 허용해줘',
@@ -1400,7 +1424,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.15'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.15.2'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 /* ═══════════════ the breed ladder — 100 rungs, one per wave ═══════════════
@@ -2702,7 +2726,7 @@ function updateAllies() {
 
 const overlays = [ovStart, ovPause, ovOver];
 function show(el)      { overlays.forEach(o => o.classList.toggle('show', o === el)); }
-function hideOverlays(){ overlays.forEach(o => o.classList.remove('show')); }
+function hideOverlays(){ overlays.forEach(o => o.classList.remove('show')); closeSharePop(); } // any screen change retires the share popover too
 
 function updateHud() {
   scoreEl.textContent = fmt(score);
@@ -2753,11 +2777,15 @@ function queueDir(d) {
 }
 
 window.addEventListener('keydown', e => {
+  if (!sharePop.hidden && e.code === 'Escape') { closeSharePop(true); return; } // the popover's Esc, before anything else
   const d = DIRS[e.code];
   if (d || e.code === 'Space' || (state === 'over' && e.code === 'Backspace')) e.preventDefault();
 
   switch (state) {
     case 'start':
+      // a focused control (the share popover's tiles, the language picker)
+      // owns Enter/Space — activating it must not ALSO begin the run
+      if ((e.code === 'Enter' || e.code === 'Space') && e.target.closest('button, select')) break;
       if (d) startGame(d);
       else if (e.code === 'Space' || e.code === 'Enter') startGame();
       break;
@@ -3239,12 +3267,13 @@ function shareGame() {
 }
 $('btn-share').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); SND.ui(); shareRun(); });
 btnSaveCard.addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); SND.ui(); saveCard(); });
-$('btn-share-game').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); SND.ui(); shareGame(); });
+// btn-share-game's listener lives with the share popover below
 
-/* ── social share row — desktop game-over card ──────────────────────────
+/* ── social tiles — one renderer, two seats ───────────────────────────
    Where navigator.canShare({files}) is false (desktops), the native sheet
-   can't attach the PNG. These URL intents carry the localized run text +
-   the game link; "Save card" below the divider is the image path. Each
+   can't attach the PNG. These URL intents carry text + link instead; the
+   game-over card uses the run text ("Save card" below the divider is the
+   image path) and the start screen's popover uses the game text. Each
    opens the platform's share intent in a new tab. window.open is called
    WITHOUT 'noopener' — that arg makes it return null by spec, and the
    return value is how a blocked popup is detected; the opener link is
@@ -3259,6 +3288,51 @@ const SOCIAL_INTENTS = {
   linkedin: (text, url) => `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
   whatsapp: (text, url) => `https://wa.me/?text=${text}%20${url}`, // WhatsApp has no url param — text carries both
 };
+const SOC_TILES = `
+  <button class="soc" data-soc="x" data-t-aria="ariaShareX" style="--brand:#e7e9ea">
+    <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>
+    </svg>
+  </button>
+  <button class="soc" data-soc="facebook" data-t-aria="ariaShareFacebook" style="--brand:#1877f2">
+    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+    </svg>
+  </button>
+  <button class="soc" data-soc="reddit" data-t-aria="ariaShareReddit" style="--brand:#ff4500">
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="5.1" r="1.9" fill="currentColor"/>
+      <path d="M12 6.9v3.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      <path fill="currentColor" fill-rule="evenodd" d="M12 8.9c4.31 0 7.8 2.51 7.8 5.6s-3.49 5.6-7.8 5.6-7.8-2.51-7.8-5.6 3.49-5.6 7.8-5.6Zm-3.05 3.9a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Zm6.1 0a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"/>
+      <path d="M9.4 17.1c1.63 1.15 3.57 1.15 5.2 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+  </button>
+  <button class="soc" data-soc="line" data-t-aria="ariaShareLine" style="--brand:#06c755">
+    <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4.25 5.25H19.75A1.75 1.75 0 0 1 21.5 7v8a1.75 1.75 0 0 1-1.75 1.75h-8.35l-3.5 3.15c-.55.44-1.4.07-1.4-.64v-2.51h-.43A1.75 1.75 0 0 1 2.5 16V7a1.75 1.75 0 0 1 1.75-1.75Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+      <text x="12" y="13.2" text-anchor="middle" font-size="5" font-weight="800" fill="currentColor" style="font-family:var(--sans)">LINE</text>
+    </svg>
+  </button>
+  <button class="soc" data-soc="linkedin" data-t-aria="ariaShareLinkedIn" style="--brand:#0a66c2">
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.225 0z"/>
+    </svg>
+  </button>
+  <button class="soc" data-soc="whatsapp" data-t-aria="ariaShareWhatsApp" style="--brand:#25d366">
+    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+    </svg>
+  </button>`;
+$('social-row').innerHTML = SOC_TILES;        // game-over card: the run
+$('social-row-game').innerHTML = SOC_TILES;   // start-screen popover: the game
+
+function openSocialIntent(b, text){
+  const encText = encodeURIComponent(text), encUrl = encodeURIComponent(shareLink());
+  const u = SOCIAL_INTENTS[b.dataset.soc](encText, encUrl);
+  const w = window.open(u, '_blank');
+  if (w) { try { w.opener = null; } catch {} } // cut the opener — noopener semantics, detectably
+  else showToast(t('shareBlocked'), { quick: true }); // popup blocker — say so instead of failing silently
+}
 socialBlock.addEventListener('click', e => {
   const b = e.target.closest('.soc');
   if (!b) return;
@@ -3266,13 +3340,68 @@ socialBlock.addEventListener('click', e => {
   b.blur();
   SND.ui();
   const p = { n: wave, score: fmt(score), kills };
-  const text = lastRunNewBest ? t('shareTextBest', p) : t('shareText', p);
-  const encText = encodeURIComponent(text), encUrl = encodeURIComponent(shareLink());
-  const u = SOCIAL_INTENTS[b.dataset.soc](encText, encUrl);
-  const w = window.open(u, '_blank');
-  if (w) { try { w.opener = null; } catch {} } // cut the opener — noopener semantics, detectably
-  else showToast(t('shareBlocked'), { quick: true }); // popup blocker — say so instead of failing silently
+  openSocialIntent(b, lastRunNewBest ? t('shareTextBest', p) : t('shareText', p));
 });
+
+/* ── share popover — the start screen's desktop affordance ─────────────
+   The social row only exists on the game-over card, so the game itself
+   was intent-unshareable until you died. One tap on the mini share now
+   offers the same six intents (game text, no stats) plus copy-link.
+   Phones keep navigator.share. Dismissal: outside tap (consumed, so it
+   must not also begin the run), Esc (focus returns to the trigger), or
+   focus leaving the popover. */
+const btnShareGame = $('btn-share-game');
+const sharePop = $('share-pop');
+let popOpenAtDown = false; // was the popover up when this pointer press began?
+
+function openSharePop(){
+  sharePop.hidden = false;
+  const first = sharePop.querySelector('.soc');
+  if (first) first.focus(); // keyboard users land in the row immediately
+}
+function closeSharePop(back){
+  if (sharePop.hidden) return;
+  sharePop.hidden = true;
+  if (back) btnShareGame.focus(); // Esc hands focus back to the trigger
+}
+btnShareGame.addEventListener('click', e => {
+  e.stopPropagation(); e.currentTarget.blur(); SND.ui();
+  if (canShareFiles()) { shareGame(); return; }  // native sheet — as always on phones
+  sharePop.hidden ? openSharePop() : closeSharePop(); // toggle
+});
+sharePop.addEventListener('click', e => {
+  const b = e.target.closest('.soc');
+  if (b) {
+    e.stopPropagation(); SND.ui();
+    openSocialIntent(b, t('shareGame'));
+    closeSharePop();
+  } else if (e.target.closest('#btn-copy-link')) {
+    e.stopPropagation(); SND.ui();
+    copyShareLink();
+    closeSharePop();
+  }
+});
+sharePop.addEventListener('focusout', e => { // focus left the popover → dismiss
+  const to = e.relatedTarget;
+  if (to && (sharePop.contains(to) || to.closest('#btn-share-game'))) return; // the trigger's own click toggles instead
+  closeSharePop();
+});
+document.addEventListener('pointerdown', e => { // note before focusout closes us
+  popOpenAtDown = !sharePop.hidden && !sharePop.contains(e.target)
+               && !e.target.closest('#btn-share-game');
+}, true);
+document.addEventListener('click', e => { // the dismiss tap is consumed — it
+  if (!popOpenAtDown) return;             // must not also begin the run
+  popOpenAtDown = false;
+  closeSharePop();
+  e.stopPropagation();
+}, true);
+async function copyShareLink(){
+  try {
+    await navigator.clipboard.writeText(shareLink());
+    showToast(t('shareCopied'), { quick: true });
+  } catch {} // no clipboard / denied — stay quiet, like the copy fallback
+}
 langPick.addEventListener('click', e => e.stopPropagation()); // picking a language isn't "begin"
 btnPause.addEventListener('click', e => {
   e.stopPropagation(); e.currentTarget.blur();

@@ -1457,7 +1457,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.16.4'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.16.5'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 /* ═══════════════ the breed ladder — 100 rungs, one per wave ═══════════════
@@ -2847,7 +2847,8 @@ $('btn-restart').addEventListener('click', e => { e.stopPropagation(); e.current
 /* ── share your run ────────────────────────────────────────────── */
 const SHARE_URL = () => LANG !== 'en'
   ? SITE_URL + 'share/' + LANG                    // localized og preview → that language's landing page
-  : (/^https?:/.test(location.href) ? location.href : 'https://robenten.github.io/dead-line/');
+  : (location.href.startsWith(SITE_URL) ? SITE_URL // strip ?v=/?lang= query noise from QR/landing arrivals
+     : (/^https?:/.test(location.href) ? location.href : 'https://robenten.github.io/dead-line/'));
 let lastRunNewBest = false; // set in finish() — flexes the share copy
 
 async function doShare(data) {
@@ -4151,11 +4152,27 @@ if (/[?&]__test__/.test(location.search)) {
                particles: particles.length, pops: pops.length, stains: stains.length,
                pickup: !!pickup, score, wave, kills, snake: snake.length };
     },
-    get best() { return best; },
-    exitToTitle,
-    t, I18N,
-  };
+     get best() { return best; },
+     exitToTitle,
+     t, I18N,
+   };
 }
+
+/* Non-English: carry the localized landing link in the address bar itself, so
+   the browser's own sharing vectors (Safari's share menu, copy-URL, bookmarks)
+   spread the localized OG card instead of the root's English one. Last
+   statement of the boot script: still before first paint and before any user
+   could copy/share — but after everything that reads location.search at boot
+   (the ?__test__ hook above). The startsWith guard keeps file:// and
+   non-canonical hosts (the local test harness) out; replaceState never
+   navigates, so the landing → ?lang → replaceState cycle can't loop; and if
+   the bar already shows the landing path we skip rather than stack. */
+try {
+  if (LANG !== 'en' && location.href.startsWith(SITE_URL)) {
+    const target = SITE_URL + 'share/' + LANG;
+    if (location.pathname !== new URL(target).pathname) history.replaceState(null, '', target);
+  }
+} catch {}
 
 })();
 </script>

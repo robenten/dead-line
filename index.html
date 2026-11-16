@@ -756,6 +756,15 @@
           </svg>
           <span data-t="copyLink">Copy link</span>
         </button>
+        <!-- native sheet — only where the OS actually has one (Safari desktop:
+             AirDrop/Mail/Messages with the link). Chrome desktop has none. -->
+        <button class="copy-link" id="btn-sysshare" hidden>
+          <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true">
+            <path d="M7 10V2.4m0 0L4.3 5.1M7 2.4l2.7 2.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2.6 8.6v2.1c0 .7.6 1.3 1.3 1.3h6.2c.7 0 1.3-.6 1.3-1.3V8.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <span data-t="systemShare">System share</span>
+        </button>
       </div>
 
       <!-- pause screen -->
@@ -889,7 +898,7 @@ const I18N = {
     shareTextBest: 'New best in DEAD LINE — graveyard shift! Wave {n}, {score} pts, {kills} kills. Think you can outlast me?',
     shareGame: 'DEAD LINE — graveyard shift. Every wave brings a new, worse breed. Think you can outlast me?',
     ariaShareRow: 'Share your run',
-    ariaShareGame: 'Share the game', copyLink: 'Copy link',
+    ariaShareGame: 'Share the game', copyLink: 'Copy link', systemShare: 'System share',
     ariaShareX: 'Share on X', ariaShareFacebook: 'Share on Facebook', ariaShareReddit: 'Share on Reddit',
     ariaShareLine: 'Share on LINE', ariaShareLinkedIn: 'Share on LinkedIn', ariaShareWhatsApp: 'Share on WhatsApp',
     shareBlocked: 'Pop-up blocked — allow pop-ups to share',
@@ -944,7 +953,7 @@ const I18N = {
     shareTextBest: 'DEAD LINE — 墓場の夜番で新記録！ウェーブ{n}・{score}ポイント・{kills}キル。君に越えられるかな？',
     shareGame: 'DEAD LINE — 墓場の夜番。ウェーブごとに新たな厄介な奴が現れる。君に越えられるかな？',
     ariaShareRow: 'リザルトをシェア',
-    ariaShareGame: 'ゲームをシェア', copyLink: 'リンクをコピー',
+    ariaShareGame: 'ゲームをシェア', copyLink: 'リンクをコピー', systemShare: 'システムで共有',
     ariaShareX: 'X でシェア', ariaShareFacebook: 'Facebook でシェア', ariaShareReddit: 'Reddit でシェア',
     ariaShareLine: 'LINE でシェア', ariaShareLinkedIn: 'LinkedIn でシェア', ariaShareWhatsApp: 'WhatsApp でシェア',
     shareBlocked: 'ポップアップがブロックされました — 許可してからシェア',
@@ -999,7 +1008,7 @@ const I18N = {
     shareTextBest: '《DEAD LINE——墓园夜班》新纪录！第{n}波、{score}分、{kills}杀。你能撑得更久吗？',
     shareGame: '《DEAD LINE——墓园夜班》——每一波都有更凶的新变种。你能撑得更久吗？',
     ariaShareRow: '分享战绩',
-    ariaShareGame: '分享游戏', copyLink: '复制链接',
+    ariaShareGame: '分享游戏', copyLink: '复制链接', systemShare: '系统分享',
     ariaShareX: '分享到 X', ariaShareFacebook: '分享到 Facebook', ariaShareReddit: '分享到 Reddit',
     ariaShareLine: '分享到 LINE', ariaShareLinkedIn: '分享到 LinkedIn', ariaShareWhatsApp: '分享到 WhatsApp',
     shareBlocked: '弹窗被拦截——请允许弹窗后再分享',
@@ -1054,7 +1063,7 @@ const I18N = {
     shareTextBest: '《DEAD LINE——墓園夜班》新紀錄！第{n}波、{score}分、{kills}殺。你撐得比我久嗎？',
     shareGame: '《DEAD LINE——墓園夜班》——每一波都有更凶的新變種。你撐得比我久嗎？',
     ariaShareRow: '分享戰績',
-    ariaShareGame: '分享遊戲', copyLink: '複製連結',
+    ariaShareGame: '分享遊戲', copyLink: '複製連結', systemShare: '系統分享',
     ariaShareX: '分享到 X', ariaShareFacebook: '分享到 Facebook', ariaShareReddit: '分享到 Reddit',
     ariaShareLine: '分享到 LINE', ariaShareLinkedIn: '分享到 LinkedIn', ariaShareWhatsApp: '分享到 WhatsApp',
     shareBlocked: '彈出視窗被封鎖——請允許後再分享',
@@ -1109,7 +1118,7 @@ const I18N = {
     shareTextBest: '¡Nuevo récord en DEAD LINE! Oleada {n}, {score} pts, {kills} bajas. ¿Aguantas más que yo?',
     shareGame: 'DEAD LINE — turno de noche. Cada oleada trae una raza peor. ¿Aguantas más que yo?',
     ariaShareRow: 'Comparte tu partida',
-    ariaShareGame: 'Compartir el juego', copyLink: 'Copiar enlace',
+    ariaShareGame: 'Compartir el juego', copyLink: 'Copiar enlace', systemShare: 'Compartir con el sistema',
     ariaShareX: 'Compartir en X', ariaShareFacebook: 'Compartir en Facebook', ariaShareReddit: 'Compartir en Reddit',
     ariaShareLine: 'Compartir en LINE', ariaShareLinkedIn: 'Compartir en LinkedIn', ariaShareWhatsApp: 'Compartir en WhatsApp',
     shareBlocked: 'Ventana emergente bloqueada — permite las ventanas emergentes para compartir',
@@ -1164,7 +1173,7 @@ const I18N = {
     shareTextBest: 'Nouveau record dans DEAD LINE ! Vague {n}, {score} pts, {kills} éliminations. Tu tiendras plus longtemps ?',
     shareGame: 'DEAD LINE — garde de nuit. Chaque vague amène une pire espèce. Tu tiendras plus longtemps ?',
     ariaShareRow: 'Partage ta partie',
-    ariaShareGame: 'Partager le jeu', copyLink: 'Copier le lien',
+    ariaShareGame: 'Partager le jeu', copyLink: 'Copier le lien', systemShare: 'Partage système',
     ariaShareX: 'Partager sur X', ariaShareFacebook: 'Partager sur Facebook', ariaShareReddit: 'Partager sur Reddit',
     ariaShareLine: 'Partager sur LINE', ariaShareLinkedIn: 'Partager sur LinkedIn', ariaShareWhatsApp: 'Partager sur WhatsApp',
     shareBlocked: 'Pop-up bloquée — autorise les pop-ups pour partager',
@@ -1219,7 +1228,7 @@ const I18N = {
     shareTextBest: 'Neuer Rekord in DEAD LINE! Welle {n}, {score} Punkte, {kills} Kills. Hältst du länger durch?',
     shareGame: 'DEAD LINE — Nachtschicht. Jede Welle bringt eine schlimmere Rasse. Hältst du länger durch?',
     ariaShareRow: 'Teile deinen Lauf',
-    ariaShareGame: 'Spiel teilen', copyLink: 'Link kopieren',
+    ariaShareGame: 'Spiel teilen', copyLink: 'Link kopieren', systemShare: 'Über das System teilen',
     ariaShareX: 'Auf X teilen', ariaShareFacebook: 'Auf Facebook teilen', ariaShareReddit: 'Auf Reddit teilen',
     ariaShareLine: 'Auf LINE teilen', ariaShareLinkedIn: 'Auf LinkedIn teilen', ariaShareWhatsApp: 'Auf WhatsApp teilen',
     shareBlocked: 'Pop-up blockiert — erlaube Pop-ups zum Teilen',
@@ -1274,7 +1283,7 @@ const I18N = {
     shareTextBest: 'DEAD LINE 신기록! 제{n}파, {score}점, {kills}킬. 네가 더 오래 버틸 수 있겠어?',
     shareGame: 'DEAD LINE — 묘지 야근. 매 웨이브마다 더 흉포한 놈이 나타난다. 네가 더 오래 버틸 수 있겠어?',
     ariaShareRow: '결과 공유하기',
-    ariaShareGame: '게임 공유', copyLink: '링크 복사',
+    ariaShareGame: '게임 공유', copyLink: '링크 복사', systemShare: '시스템 공유',
     ariaShareX: 'X에 공유', ariaShareFacebook: 'Facebook에 공유', ariaShareReddit: 'Reddit에 공유',
     ariaShareLine: 'LINE에 공유', ariaShareLinkedIn: 'LinkedIn에 공유', ariaShareWhatsApp: 'WhatsApp에 공유',
     shareBlocked: '팝업이 차단됐어 — 공유하려면 팝업을 허용해줘',
@@ -1424,7 +1433,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.15.2'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.16'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 /* ═══════════════ the breed ladder — 100 rungs, one per wave ═══════════════
@@ -2336,7 +2345,7 @@ function finish() {
   pillBest.hidden        = !newBest;
   lastRunNewBest        = newBest;
   btnSaveCard.hidden    = canShareFiles(); // no image share on this browser → the card is downloadable instead
-  socialBlock.hidden    = canShareFiles(); // same audience: desktops get URL-intent sharing (text + link; Save card carries the PNG)
+  socialBlock.hidden    = isPhoneLike();   // social tiles on every desktop (Safari's canShare-files desktop included); phones keep the native sheet. Green Share still uses navigator.share when available.
   updateHud();
   overTimer = setTimeout(() => show(ovOver), 620); // let the death land first
 }
@@ -3230,6 +3239,18 @@ const canShareFiles = () => {
   } catch { return false; }
 };
 
+/* Phone-like = touch input AND a native sheet that can carry files.
+   This — not canShareFiles() alone — is the social-tiles gate: Safari on
+   macOS reports canShare({files}) true, but a desktop player expects the
+   social options, not Mail/Copy. Tiles and popover therefore show on
+   every non-touch device (or touch device without file share, e.g.
+   Firefox-class mobile); phones keep the native sheet exclusively. */
+const isPhoneLike = () => {
+  try {
+    return ('ontouchstart' in window || navigator.maxTouchPoints > 0) && canShareFiles();
+  } catch { return false; }
+};
+
 async function shareRun() {
   const p = { n: wave, score: fmt(score), kills };
   const text = lastRunNewBest ? t('shareTextBest', p) : t('shareText', p);
@@ -3366,7 +3387,7 @@ function closeSharePop(back){
 }
 btnShareGame.addEventListener('click', e => {
   e.stopPropagation(); e.currentTarget.blur(); SND.ui();
-  if (canShareFiles()) { shareGame(); return; }  // native sheet — as always on phones
+  if (isPhoneLike()) { shareGame(); return; }  // native sheet — phones only (a Safari desktop gets the popover)
   sharePop.hidden ? openSharePop() : closeSharePop(); // toggle
 });
 sharePop.addEventListener('click', e => {
@@ -3379,8 +3400,13 @@ sharePop.addEventListener('click', e => {
     e.stopPropagation(); SND.ui();
     copyShareLink();
     closeSharePop();
+  } else if (e.target.closest('#btn-sysshare')) {
+    e.stopPropagation(); SND.ui();
+    closeSharePop();
+    shareGame(); // the OS sheet — AirDrop/Mail/Messages on Safari desktop, the link
   }
 });
+$('btn-sysshare').hidden = !navigator.share; // only where the OS actually has one
 sharePop.addEventListener('focusout', e => { // focus left the popover → dismiss
   const to = e.relatedTarget;
   if (to && (sharePop.contains(to) || to.closest('#btn-share-game'))) return; // the trigger's own click toggles instead
@@ -4080,6 +4106,7 @@ if (/[?&]__test__/.test(location.search)) {
   window.__DL_TEST__ = {
     renderShareCard,
     canShareFiles,
+    isPhoneLike,
     setLang(l) { LANG = l; applyLang(); },
     setBest(v) { best = v; },
     forceOver(s, w, k) { score = s; wave = w; kills = k; finish(); },

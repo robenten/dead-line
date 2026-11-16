@@ -5,6 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#090d0f">
 <meta name="description" id="meta-desc" content="DEAD LINE — a graveyard-shift snake game. Recruit the living, dodge the horde, fight back with a weapon.">
+<!-- social link previews — URL intents can't carry images, so the visual is
+     whatever the platforms' crawlers scrape from here. Absolute URLs:
+     crawlers don't resolve relative paths. og-image.png (1200x630) is the
+     share-card painter's aesthetic, generated once — don't hotlink it from
+     the game; it exists for the scrapers. -->
+<meta property="og:title" content="DEAD LINE">
+<meta property="og:description" content="A graveyard-shift arcade game — recruit the living, dodge the horde, fight back with a weapon. Every wave brings a new, worse breed.">
+<meta property="og:image" content="https://robenten.github.io/dead-line/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="DEAD LINE — the living flee the horde through a moonlit graveyard; a machete gleams nearby">
+<meta property="og:url" content="https://robenten.github.io/dead-line/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="DEAD LINE">
+<meta name="twitter:description" content="A graveyard-shift arcade game — recruit the living, dodge the horde, fight back with a weapon. Every wave brings a new, worse breed.">
+<meta name="twitter:image" content="https://robenten.github.io/dead-line/og-image.png">
 <title>DEAD LINE — graveyard shift</title>
 <!--
   ─────────────────────────────────────────────────────────────
@@ -1433,7 +1450,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.16'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.16.2'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 /* ═══════════════ the breed ladder — 100 rungs, one per wave ═══════════════

@@ -1457,7 +1457,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.16.3'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.16.4'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 /* ═══════════════ the breed ladder — 100 rungs, one per wave ═══════════════
@@ -2868,7 +2868,7 @@ async function doShare(data) {
    chat apps and square-friendly feeds where 1:1 fills the phone
    edge-to-edge and no platform letterboxes or crops it. */
 const CARD_PX   = 1080;
-const CARD_URL  = 'https://robenten.github.io/dead-line/?v=2026.11.14.7';
+const CARD_URL  = 'https://robenten.github.io/dead-line/?v=' + BUILD.slice(1); // derived from BUILD — lockstep by construction
 const CARD_SANS = '"Avenir Next","Century Gothic","Segoe UI","Helvetica Neue",sans-serif';
 const CARD_MONO = '"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace';
 
@@ -3327,8 +3327,8 @@ btnSaveCard.addEventListener('click', e => { e.stopPropagation(); e.currentTarge
    severed by hand instead, so the semantics match. */
 const SITE_URL = 'https://robenten.github.io/dead-line/';
 const shareLink = () => LANG !== 'en'
-  ? SITE_URL + 'share/' + LANG + '?v=' + BUILD.slice(1) // localized og preview for the post, cache-busted
-  : SITE_URL + '?v=' + BUILD.slice(1); // bust the ~10min page cache, built from constants
+  ? SITE_URL + 'share/' + LANG        // localized og preview for the post — clean canonical URL scrapes most reliably
+  : SITE_URL;                          // no ?v= here: query strings break link previews in some apps (iMessage/LINE); og:url canonicalizes anyway
 const SOCIAL_INTENTS = {
   x:        (text, url) => `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
   facebook: (text, url) => `https://www.facebook.com/sharer/sharer.php?u=${url}`,

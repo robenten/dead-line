@@ -22,6 +22,12 @@
 <meta name="twitter:title" content="DEAD LINE">
 <meta name="twitter:description" content="A graveyard-shift arcade game — recruit the living, dodge the horde, fight back with a weapon. Every wave brings a new, worse breed.">
 <meta name="twitter:image" content="https://robenten.github.io/dead-line/og-image.png">
+<!-- installable offline PWA — icons/manifest/sw.js live at the site root -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DEAD LINE">
 <title>DEAD LINE — graveyard shift</title>
 <!--
   ─────────────────────────────────────────────────────────────
@@ -1457,7 +1463,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.16.5'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.17'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 /* ═══════════════ the breed ladder — 100 rungs, one per wave ═══════════════
@@ -4175,6 +4181,13 @@ try {
 } catch {}
 
 })();
+</script>
+<script>
+  /* PWA — register the offline service worker. Guarded to https so file://,
+     the http test harness, and a future Capacitor shell (capacitor://) stay
+     clean. Registers post-load, fails silently. */
+  if ('serviceWorker' in navigator && location.protocol === 'https:')
+    addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 </script>
 </body>
 </html>

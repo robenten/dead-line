@@ -10,7 +10,7 @@
  *    bump the filename if one ever changes.
  *  - Old caches are swept on activate by cache-name version.
  */
-const CACHE = 'dead-line-v2026.11.20.4'; // .4: game-art shoulder-tap icon set
+const CACHE = 'dead-line-v2026.11.20.5'; // .5: zombie body removed — hand-only icon; installed PWAs re-fetch
 
 self.addEventListener('install', e => {
   e.waitUntil((async () => {

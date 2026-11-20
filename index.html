@@ -44,8 +44,7 @@
   As HUMAN (current gameplay):
     · Wandering humans are your recruits — touch them with your head
       to grow the line. Touching zombies unpowered is fatal — grab a weapon to fight back.
-    · Recruits come in classes: SURVIVORS are bulk · FIGHTERS (red
-      bandana) cut down zombies that catch the chain near them ·
+    · Recruits come in classes: SURVIVORS are bulk ·
       HUNTERS (green cap) snipe the nearest zombie · MEDICS (white
       helmet) slowly regrow lost recruits, up to your peak length.
     · The horde has breeds (human role): RUNNERS are lanky and fast
@@ -461,7 +460,6 @@
   .d-run{ background:#ffd166; box-shadow:0 0 8px rgba(255,209,102,.6); }
   .d-lunge{ background:#ff8c42; box-shadow:0 0 8px rgba(255,140,66,.6); }
   .d-cut{ background:#e5b84b; box-shadow:0 0 8px rgba(229,184,75,.55); }
-  .d-fight{ background:#d8443f; box-shadow:0 0 8px rgba(216,68,63,.6); }
   .d-hunt{ background:#5ac8b0; box-shadow:0 0 8px rgba(90,200,176,.6); }
 
   .final{ display:flex; flex-direction:column; gap:8px; align-items:center; }
@@ -938,7 +936,6 @@ const I18N = {
     ariaFrame: 'Dead Line game', ariaBoard: 'Dead Line board', ariaLang: 'Language',
     hintSwipe: 'swipe to steer · tap to pause', or: 'or', hintPause: 'pause', hintReplay: 'replay', 
     lg1: "Touch wandering humans to recruit them — that's how you grow",
-    lg2: 'Fighters cut down zombies that catch the chain near them',
     lg3: 'Hunters snipe the nearest zombie, on a cooldown',
     lg4: 'Medics slowly regrow lost recruits, up to your peak',
     lg5: 'Touch a zombie unpowered and it devours your leader — a weapon turns the tables',
@@ -993,7 +990,6 @@ const I18N = {
     ariaFrame: 'Dead Line ゲーム', ariaBoard: 'Dead Line 盤面', ariaLang: '言語',
     hintSwipe: 'スワイプで操る · タップで一時停止', or: 'または', hintPause: '停止', hintReplay: '再挑戦', 
     lg1: 'さまよう人間に触れて仲間に — それが成長の道',
-    lg2: 'ファイターは隊列に迫るゾンビを切り捨てる',
     lg3: 'ハンターは最寄りのゾンビを狙撃（クールダウン制）',
     lg4: 'メディックは失った仲間を少しずつ再生',
     lg5: '無強化でゾンビに触れるとリーダーが食われる — 武器で反撃せよ',
@@ -1048,7 +1044,6 @@ const I18N = {
     ariaFrame: 'Dead Line 游戏', ariaBoard: 'Dead Line 棋盘', ariaLang: '语言',
     hintSwipe: '滑动转向 · 点按暂停', or: '或', hintPause: '暂停', hintReplay: '重开', 
     lg1: '接触游荡的人类即可招募——这是成长的方式',
-    lg2: '战士会砍翻咬住队伍附近丧尸',
     lg3: '猎人冷却完毕就狙杀最近的丧尸',
     lg4: '医师会慢慢补回失去的队员，直到峰值',
     lg5: '无强化时碰到丧尸，队长会被吞掉——拾取武器反击',
@@ -1103,7 +1098,6 @@ const I18N = {
     ariaFrame: 'Dead Line 遊戲', ariaBoard: 'Dead Line 棋盤', ariaLang: '語言',
     hintSwipe: '滑動轉向 · 點按暫停', or: '或', hintPause: '暫停', hintReplay: '重開', 
     lg1: '接觸遊蕩的人類即可招募——這是成長的方式',
-    lg2: '鬥士會砍翻咬住隊伍附近的殭屍',
     lg3: '獵人冷卻完畢就狙殺最近的殭屍',
     lg4: '醫護會慢慢補回失去的隊員，直到峰值',
     lg5: '無強化時碰到殭屍，隊長會被吞掉——拾取武器反擊',
@@ -1158,7 +1152,6 @@ const I18N = {
     ariaFrame: 'Juego Dead Line', ariaBoard: 'Tablero Dead Line', ariaLang: 'Idioma',
     hintSwipe: 'desliza para girar · toca para pausar', or: 'o', hintPause: 'pausa', hintReplay: 'repetir', 
     lg1: 'Toca a los humanos errantes para reclutarlos: así creces',
-    lg2: 'Los luchadores abaten a los zombis que alcanzan la fila cerca de ellos',
     lg3: 'Los cazadores disparan al zombi más cercano, con recarga',
     lg4: 'Los médicos recuperan poco a poco a tus reclutas, hasta tu máximo',
     lg5: 'Tocar un zombi sin poder te devora al líder — un arma lo cambia todo',
@@ -1213,7 +1206,6 @@ const I18N = {
     ariaFrame: 'Jeu Dead Line', ariaBoard: 'Plateau Dead Line', ariaLang: 'Langue',
     hintSwipe: 'glisse pour diriger · touche pour pauser', or: 'ou', hintPause: 'pause', hintReplay: 'rejouer', 
     lg1: 'Touche les humains errants pour les recruter — c’est ainsi que tu grandis',
-    lg2: 'Les bagarreurs abattent les zombies qui touchent la file',
     lg3: 'Les chasseurs tirent sur le zombie le plus proche, avec rechargement',
     lg4: 'Les médecins font revenir peu à peu tes recrues, jusqu’à ton record',
     lg5: 'Toucher un zombie sans pouvoir dévore ton chef — une arme renverse tout',
@@ -1268,7 +1260,6 @@ const I18N = {
     ariaFrame: 'Dead Line Spiel', ariaBoard: 'Dead Line Brett', ariaLang: 'Sprache',
     hintSwipe: 'wischen zum Lenken · tippen für Pause', or: 'oder', hintPause: 'Pause', hintReplay: 'Neustart', 
     lg1: 'Berühre umherstreifende Menschen, um sie anzuwerben — so wächst du',
-    lg2: 'Kämpfer hacken Zombies nieder, die die Kette nahe ihnen fassen',
     lg3: 'Jäger schießen den nächsten Zombie ab, mit Abklingzeit',
     lg4: 'Sanitäter lassen verlorene Rekruten langsam zurückwachsen',
     lg5: 'Zombie ohne Power berühren verschlingt deinen Anführer — die Waffe dreht den Spieß',
@@ -1323,7 +1314,6 @@ const I18N = {
     ariaFrame: 'Dead Line 게임', ariaBoard: 'Dead Line 보드', ariaLang: '언어',
     hintSwipe: '스와이프로 조종 · 탭하여 일시정지', or: '또는', hintPause: '정지', hintReplay: '재도전', 
     lg1: '배회하는 인간에게 닿으면 영입 — 그게 성장의 길',
-    lg2: '전사는 대열 근처의 좀비를 베어 넘긴다',
     lg3: '사수는 쿨다운마다 가장 가까운 좀비를 저격',
     lg4: '의무병은 잃은 대원을 서서히 되살린다',
     lg5: '무강화 상태로 좀비에 닿으면 대장이 잡아먹힌다 — 무기로 반격',
@@ -1463,7 +1453,7 @@ const MEAL_SCALE = .04;    // fed zombies grow this much, per meal
 const MEAL_SCALE_CAP = 1.12;
 const BRUTE_MEAL_CAP = 1.13; // keeps the fed brute ≈1.7× a walker (1.2 enlarge × 1.5 breed × this)
 
-const BUILD = 'v2026.11.17'; // single source of truth for the visible build badge (page is cached ~10min)
+const BUILD = 'v2026.11.20'; // single source of truth for the visible build badge (page is cached ~10min)
 
 /* zombie breeds (human-role foes) — stats in hp / ms / grid cells, all gt-driven */
 /* ═══════════════ the breed ladder — 100 rungs, one per wave ═══════════════
@@ -1584,8 +1574,6 @@ const ALLY_CAP = 6;           // max wandering recruits on the board (human role
 const ALLY_SPAWN_MS = 3500;   // pacing between recruit spawns
 const ALLY_FLEE_R = 4;        // wanderers bolt from zombies this close
 const ALLY_BEACON = 6;       // wanderers jog toward your head inside this radius
-const FIGHTER_REACH = 3;      // chain segments either way that a fighter guards
-const FIGHTER_CD = 12000;     // fighter save cooldown (ms) — not invincibility
 const HUNTER_RANGE = 5;       // cells — hunters shoot the nearest zombie in range
 const HUNTER_CD = 5000;       // hunter shot cooldown (ms)
 const MEDIC_CD = 12000;       // medic regrow cooldown (ms) — restores to your peak length
@@ -2035,7 +2023,7 @@ const fmt = (n, w = 4) => String(n).padStart(w, '0');
 const pick = a => a[(Math.random() * a.length) | 0];
 const shuffled = () => CARD.slice().sort(() => Math.random() - .5);
 
-const CLASS_WEIGHTS = [['survivor', .45], ['fighter', .25], ['hunter', .20], ['medic', .10]];
+const CLASS_WEIGHTS = [['survivor', .60], ['hunter', .27], ['medic', .13]];
 function pickClass() {
   let r = Math.random();
   for (const [c, w] of CLASS_WEIGHTS) if ((r -= w) < 0) return c;
@@ -2047,7 +2035,7 @@ function makeChar(faction, cls) {
   return {
     skin: pick(HUMAN_SKINS), hair: pick(HAIRS), cloth: pick(HUMAN_SHIRTS),
     arms: 2, phase: Math.random() * 7,
-    cls: cls || pickClass(), // survivor | fighter | hunter | medic
+    cls: cls || pickClass(), // survivor | hunter | medic
   };
 }
 const foeFaction = () => 'zombie'; // human-only — the enemy is always the horde
@@ -2055,8 +2043,8 @@ const foeFaction = () => 'zombie'; // human-only — the enemy is always the hor
 /* ═══════════════ role select ═══════════════ */
 
 function humanLegend() {
-  const dots = ['hum', 'fight', 'hunt', 'med', 'bite', 'run', 'cut'];
-  return dots.map((d, i) => `<li><i class="dot d-${d}"></i><span>${t('lg' + (i + 1))}</span></li>`).join('');
+  const rows = [['hum','lg1'], ['hunt','lg3'], ['med','lg4'], ['bite','lg5'], ['run','lg6'], ['cut','lg7']];
+  return rows.map(([d, k]) => `<li><i class="dot d-${d}"></i><span>${t(k)}</span></li>`).join('');
 }
 function applyRoleSkin() {
   readyTitle.textContent = t('readyH');
@@ -2194,7 +2182,7 @@ function step() {
   if (pickup && pickup.x === head.x && pickup.y === head.y) eatPickup();
 }
 
-function killFoe(f, pts) { // shared by headbutts, fighter saves and hunter shots
+function killFoe(f, pts) { // shared by headbutts and hunter shots
   const i = foes.indexOf(f);
   if (i < 0) return;
   if ((f.hp || 1) > 1 && gt >= frenzyUntil) { // brutes soak hits — unless the line is powered
@@ -2286,19 +2274,6 @@ function bite(f, idx) {
   // a foe reaching your chain pays for it — humans get thrown clear,
   // zombies settle in and devour their catch on the spot
   if (gt < frenzyUntil) { killFoe(f, powerKillPts(f)); return; } // powered: contact is lethal
-  if (role === 'human') {
-    // a fighter within reach cuts the zombie down BEFORE it eats — no loss
-    let fj = -1;
-    for (let j = 0; j < roster.length; j++) {
-      const c = roster[j];
-      if (c.cls === 'fighter' && gt >= (c.cdUntil || 0) && Math.abs(j - idx) <= FIGHTER_REACH) { fj = j; break; }
-    }
-    if (fj >= 0) {
-      roster[fj].cdUntil = gt + FIGHTER_CD;
-      killFoe(f, 50); // gore, points, the save
-      return;
-    }
-  }
   const caughtChar = roster[idx] || makeChar(role);
   SND.hurt(f.x);
   SND.scatter(f.x); // the cut — screams and running feet
@@ -3029,7 +3004,7 @@ const qrEncode = (() => {
 /* the card's cast — fixed looks & phases, so the art is deterministic */
 const CARD_CREW = [
   { skin:'#c68d5e', hair:'#33424a', cloth:'#5a7d8c', arms:2, phase:1.3, cls:'survivor' }, // leader
-  { skin:'#e8c39e', hair:'#2f3a30', cloth:'#6a8c7d', arms:2, phase:2.9, cls:'fighter'  },
+  { skin:'#e8c39e', hair:'#2f3a30', cloth:'#6a8c7d', arms:2, phase:2.9, cls:'survivor' },
   { skin:'#8d5a3b', hair:'#41382b', cloth:'#8c6a4a', arms:2, phase:4.4, cls:'hunter'   },
   { skin:'#f0d0b0', hair:'#2f2f3a', cloth:'#8c7d5a', arms:2, phase:5.8, cls:'medic'    },
   { skin:'#a06a48', hair:'#2f3a30', cloth:'#8c5a6a', arms:2, phase:0.7, cls:'survivor' },
@@ -3777,10 +3752,7 @@ function drawHumanChar(cx, cy, t, c, o) {
   ctx.fillStyle = c.hair;
   ctx.beginPath(); ctx.arc(0, -8.5, 4.6, Math.PI * 1.12, Math.PI * 1.88); ctx.closePath(); ctx.fill();
   // class kit — readable at a glance
-  if (c.cls === 'fighter') { // red bandana
-    ctx.strokeStyle = '#d8443f'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(0, -8.5, 4.7, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
-  } else if (c.cls === 'hunter') { // green cap + brim + rifle
+  if (c.cls === 'hunter') { // green cap + brim + rifle
     ctx.fillStyle = '#3d5a3f';
     ctx.beginPath(); ctx.arc(0, -8.5, 4.7, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
     ctx.fillRect(fx * 2.2 - 1.8, -9.1, 3.6, 1.6);
@@ -4148,6 +4120,9 @@ if (/[?&]__test__/.test(location.search)) {
     setRun(s, w, k) { score = s; wave = w; kills = k; },
     dieNow(cause) { die(cause); },
     setStepMs(v) { stepMs = v; }, // slow the chain so a run survives long music tests
+    pickClass, // test hook — the weighted recruit-class picker
+    bite,      // test hook — force a bite on the live chain
+    armFrenzy: () => { frenzyUntil = gt + 8000; }, // test hook — open the FIGHT BACK window
     clearFoes() { foes.length = 0; allies.length = 0; },
     snd: SND,
     get lastCard() { return lastCard; },
